@@ -4,12 +4,10 @@ Uses the MLB Stats API boxscore to get the full roster (including bench players
 who never batted), and Statcast data to reconstruct the batting order.
 """
 
+import argparse
 import sys
 import requests
 from pybaseball import statcast
-
-TEAM = "NYM"
-DATE = "2024-07-01"
 
 # Statcast abbreviation -> MLB Stats API team ID
 TEAM_IDS = {
@@ -64,9 +62,9 @@ def get_all_position_players(game_pk, team):
     return position_players, side
 
 
-def get_batting_order(game_pk, side):
+def get_batting_order(game_pk, side, date):
     """Get batting order from Statcast data for starters and in-game subs."""
-    data = statcast(start_dt=DATE, end_dt=DATE)
+    data = statcast(start_dt=date, end_dt=date)
     game = data[data["game_pk"] == game_pk]
     half = "Bot" if side == "home" else "Top"
     team_batting = game[game["inning_topbot"] == half]
@@ -90,7 +88,7 @@ def get_team_lineup(team, date):
         return None
 
     position_players, side = get_all_position_players(game_pk, team)
-    batting_order = get_batting_order(game_pk, side)
+    batting_order = get_batting_order(game_pk, side, date)
 
     # Get game info for display
     resp = requests.get(f"https://statsapi.mlb.com/api/v1/schedule", params={
@@ -131,8 +129,16 @@ def get_team_lineup(team, date):
 
 
 if __name__ == "__main__":
+    # argparse is Python's built-in CLI argument parser (like Swift ArgumentParser).
+    # "positional" args are required by default — no flag needed, just order matters.
+    parser = argparse.ArgumentParser(description="Pull all eligible batters for a team on a date.")
+    parser.add_argument("team", choices=TEAM_IDS.keys(), help="Team abbreviation (e.g. NYM, LAD, NYY)")
+    parser.add_argument("date", help="Game date in YYYY-MM-DD format")
+
+    args = parser.parse_args()
+
     try:
-        result = get_team_lineup(TEAM, DATE)
+        result = get_team_lineup(args.team, args.date)
         if result is None:
             sys.exit(1)
     except Exception as e:
