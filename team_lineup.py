@@ -5,9 +5,10 @@ who never batted), and Statcast data to reconstruct the batting order.
 """
 
 import argparse
+import math
 import sys
 import requests
-from pybaseball import statcast
+from pybaseball import statcast, statcast_batter
 
 # Statcast abbreviation -> MLB Stats API team ID
 TEAM_IDS = {
@@ -79,8 +80,66 @@ def get_batting_order(game_pk, side, date):
     return {row["batter"]: i + 1 for i, (_, row) in enumerate(order.iterrows())}
 
 
+def get_xwoba_splits(batter_ids, date):
+    """Calculate season xwOBA and L/R splits for each batter up to the given date.
+
+    For each plate appearance, we use the Statcast "expected" wOBA based on exit
+    velocity and launch angle when available, falling back to the actual wOBA
+    value for non-batted-ball outcomes (walks, strikeouts, HBP).
+    """
+    year = date[:4]
+    season_start = f"{year}-03-20"
+
+    splits = {}
+    for batter_id in batter_ids:
+        try:
+            data = statcast_batter(season_start, date, batter_id)
+        except Exception:
+            continue
+
+        # woba_denom == 1 marks plate-appearance-ending events (filters out
+        # mid-AB pitches). Similar to filtering with a predicate in Swift.
+        pa_events = data[data["woba_denom"] == 1].copy()
+        if pa_events.empty:
+            continue
+
+        # .fillna() replaces NaN values with a fallback — like Swift's ?? operator.
+        pa_events["xwoba"] = pa_events["estimated_woba_using_speedangle"].fillna(
+            pa_events["woba_value"]
+        )
+
+        overall = pa_events["xwoba"].mean()
+
+        vs_l = pa_events[pa_events["p_throws"] == "L"]["xwoba"]
+        vs_r = pa_events[pa_events["p_throws"] == "R"]["xwoba"]
+
+        vs_l_mean = vs_l.mean() if not vs_l.empty else float("nan")
+        vs_r_mean = vs_r.mean() if not vs_r.empty else float("nan")
+
+        splits[batter_id] = {
+            "xwoba": overall,
+            "diff_L": vs_l_mean - overall if not math.isnan(vs_l_mean) else None,
+            "diff_R": vs_r_mean - overall if not math.isnan(vs_r_mean) else None,
+        }
+
+    return splits
+
+
+def format_xwoba(val):
+    """Format xwOBA in baseball convention (no leading zero): .345"""
+    return f".{val * 1000:03.0f}"
+
+
+def format_diff(val):
+    """Format a split diff as a signed value: +0.032 or -0.015"""
+    if val is None:
+        return "  --  "
+    return f"{val:+.3f}"
+
+
 def get_team_lineup(team, date):
-    print(f"Fetching {team} eligible batters for {date}...\n")
+    """Fetch lineup data, compute xwOBA splits, and return formatted output string."""
+    print(f"Fetching {team} eligible batters for {date}...")
 
     game_pk = get_game_pk(team, date)
     if not game_pk:
@@ -91,7 +150,7 @@ def get_team_lineup(team, date):
     batting_order = get_batting_order(game_pk, side, date)
 
     # Get game info for display
-    resp = requests.get(f"https://statsapi.mlb.com/api/v1/schedule", params={
+    resp = requests.get("https://statsapi.mlb.com/api/v1/schedule", params={
         "gamePk": game_pk, "sportId": 1,
     })
     game_info = resp.json()["dates"][0]["games"][0]
@@ -99,7 +158,10 @@ def get_team_lineup(team, date):
     home_name = game_info["teams"]["home"]["team"]["name"]
     is_home = side == "home"
 
-    print(f"{'Home' if is_home else 'Away'} game: {away_name} @ {home_name}")
+    # Fetch season xwOBA splits for all position players
+    batter_ids = [p["mlbam_id"] for p in position_players]
+    print(f"Fetching xwOBA splits for {len(batter_ids)} batters...")
+    splits = get_xwoba_splits(batter_ids, date)
 
     # Split into starters (had PAs, in batting order) and bench
     starters = []
@@ -115,17 +177,45 @@ def get_team_lineup(team, date):
     starters.sort(key=lambda x: x["order"])
     bench.sort(key=lambda x: x["name"])
 
-    print(f"\n--- {team} Batting Lineup ({date}) ---\n")
+    # Build formatted output as a list of strings, then join at the end.
+    # In Python, building a list and joining is idiomatic — more like
+    # Array<String> in Swift than repeated string concatenation.
+    W = 66
+    lines = []
+    lines.append("=" * W)
+    lines.append(f"  {team} Batting Lineup — {date}".center(W))
+    matchup = f"{'Home' if is_home else 'Away'}: {away_name} @ {home_name}"
+    lines.append(matchup.center(W))
+    lines.append("=" * W)
+
+    hdr = f"  {'#':>2}   {'Player':<24} {'Pos':<4} {'xwOBA':>5}  {'vL':>6}  {'vR':>6}"
+    lines.append(hdr)
+    lines.append("  " + "-" * (W - 4))
+
+    def player_line(prefix, p):
+        s = splits.get(p["mlbam_id"], {})
+        xw = format_xwoba(s["xwoba"]) if "xwoba" in s else " --  "
+        dl = format_diff(s.get("diff_L"))
+        dr = format_diff(s.get("diff_R"))
+        return f"  {prefix} {p['name']:<24} {p['position']:<4} {xw:>5}  {dl:>6}  {dr:>6}"
+
     for i, p in enumerate(starters, 1):
-        print(f"  {i:>2}. {p['name']:<25} {p['position']:<3}  ({p['pa']} PA)")
+        lines.append(player_line(f"{i:>2}.", p))
 
     if bench:
-        print(f"\n--- Bench ---\n")
+        lines.append("")
+        lines.append("  Bench")
+        lines.append("  " + "-" * (W - 4))
         for p in bench:
-            print(f"      {p['name']:<25} {p['position']:<3}")
+            lines.append(player_line("   ", p))
 
-    print(f"\nTotal eligible batters: {len(position_players)}")
-    return position_players
+    lines.append("")
+    lines.append(f"  Total eligible batters: {len(position_players)}")
+    lines.append("=" * W)
+
+    output = "\n".join(lines)
+    print(output)
+    return output
 
 
 if __name__ == "__main__":
@@ -135,12 +225,34 @@ if __name__ == "__main__":
     parser.add_argument("team", choices=TEAM_IDS.keys(), help="Team abbreviation (e.g. NYM, LAD, NYY)")
     parser.add_argument("date", help="Game date in YYYY-MM-DD format")
 
+    # nargs="?" makes a flag accept 0 or 1 values:
+    #   -o          → uses `const` ("auto")    — auto-generates filename
+    #   -o FILE     → uses the value ("FILE")  — explicit filename
+    #   (omitted)   → uses `default` (None)    — no file output
+    # In Swift terms, this is like an Optional<String> with a default value.
+    parser.add_argument(
+        "-o", "--output",
+        nargs="?", const="auto", default=None,
+        help="Save to .txt file. Omit value for auto-named file, or pass a path.",
+    )
+
     args = parser.parse_args()
 
     try:
         result = get_team_lineup(args.team, args.date)
         if result is None:
             sys.exit(1)
+
+        if args.output is not None:
+            filename = (f"{args.team}_{args.date}_lineup.txt"
+                        if args.output == "auto" else args.output)
+            # "with open(...) as f" is a context manager — it auto-closes the file
+            # when the block exits, like Swift's defer { file.close() } but built
+            # into the language syntax.
+            with open(filename, "w") as f:
+                f.write(result + "\n")
+            print(f"\nSaved to {filename}")
+
     except Exception as e:
         print(f"\nError: {e}")
         sys.exit(1)
