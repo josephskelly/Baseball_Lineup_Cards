@@ -1,0 +1,25 @@
+==================================================================
+                  NYM Batting Lineup — 2024-07-01                 
+            Away: New York Mets @ Washington Nationals            
+==================================================================
+   #   Player                   Pos  xwOBA      vL      vR
+  --------------------------------------------------------------
+   1. Francisco Lindor         SS    .354  +0.060  -0.020
+   2. Harrison Bader           CF    .323  +0.019  -0.010
+   3. J.D. Martinez            DH    .392  +0.127  -0.054
+   4. Pete Alonso              1B    .345  -0.007  +0.003
+   5. Mark Vientos             3B    .367  -0.005  +0.004
+   6. Tyrone Taylor            RF    .312  -0.058  +0.031
+   7. Francisco Alvarez        C     .314  -0.013  +0.006
+   8. Jose Iglesias            3B    .336  +0.033  -0.049
+   9. Jeff McNeil              2B    .277  +0.001  -0.000
+  10. Ben Gamel                LF    .517    --    +0.000
+
+  Bench
+  --------------------------------------------------------------
+      Brandon Nimmo            LF    .378  -0.022  +0.008
+      DJ Stewart               RF    .341  -0.103  +0.009
+      Luis Torrens             C     .432  -0.069  +0.042
+
+  Total eligible batters: 13
+==================================================================
