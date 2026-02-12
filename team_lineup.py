@@ -156,7 +156,7 @@ def get_pitcher_xwoba(pitcher_id, date):
 
     Same computation as get_xwoba_splits but from the pitcher's perspective:
     - xwOBA against = expected wOBA allowed to all batters
-    - vL/vR = differential vs left-handed / right-handed batters (by stand)
+    - vL/vR = absolute xwOBA against left-handed / right-handed batters (by stand)
     """
     year = date[:4]
     season_start = f"{year}-03-20"
@@ -191,8 +191,8 @@ def get_pitcher_xwoba(pitcher_id, date):
 
     return {
         "xwoba": overall,
-        "diff_L": vs_l_mean - overall if not math.isnan(vs_l_mean) else None,
-        "diff_R": vs_r_mean - overall if not math.isnan(vs_r_mean) else None,
+        "xwoba_L": vs_l_mean if not math.isnan(vs_l_mean) else None,
+        "xwoba_R": vs_r_mean if not math.isnan(vs_r_mean) else None,
         "pa": pa_count,
         "throws": throws,
     }
@@ -272,11 +272,11 @@ def get_team_lineup(team, date):
     if opp_pitcher and pitcher_stats:
         throws = pitcher_stats["throws"]
         xw = format_xwoba(pitcher_stats["xwoba"])
-        dl = format_diff(pitcher_stats["diff_L"])
-        dr = format_diff(pitcher_stats["diff_R"])
+        xl = format_xwoba(pitcher_stats["xwoba_L"]) if pitcher_stats["xwoba_L"] is not None else " -- "
+        xr = format_xwoba(pitcher_stats["xwoba_R"]) if pitcher_stats["xwoba_R"] is not None else " -- "
         pa = pitcher_stats["pa"]
         lines.append(f"  Opposing SP: {opp_pitcher['name']} ({throws}HP)")
-        lines.append(f"  xwOBA against: {xw}   vL: {dl}   vR: {dr}   ({pa} PA)")
+        lines.append(f"  xwOBA against: {xw}   vL: {xl}   vR: {xr}   ({pa} PA)")
         lines.append("  " + "-" * (W - 4))
     elif opp_pitcher:
         lines.append(f"  Opposing SP: {opp_pitcher['name']} (no Statcast data)")

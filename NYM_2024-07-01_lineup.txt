@@ -3,7 +3,7 @@
             Away: New York Mets @ Washington Nationals            
 ==================================================================
   Opposing SP: MacKenzie Gore (LHP)
-  xwOBA against: .305   vL: +0.011   vR: -0.003   (392 PA)
+  xwOBA against: .305   vL: .315   vR: .302   (392 PA)
   --------------------------------------------------------------
    #   Player                   Pos  xwOBA      vL      vR
   --------------------------------------------------------------
