@@ -162,11 +162,23 @@ def get_xwoba_splits(batter_ids, date):
         vs_l_mean = vs_l.mean() if not vs_l.empty else float("nan")
         vs_r_mean = vs_r.mean() if not vs_r.empty else float("nan")
 
+        # GB% and FB% based on batted ball type classification
+        batted = pa_events[pa_events["bb_type"].notna()]
+        n_batted = len(batted)
+        if n_batted > 0:
+            gb_pct = (batted["bb_type"] == "ground_ball").sum() / n_batted * 100
+            fb_pct = (batted["bb_type"] == "fly_ball").sum() / n_batted * 100
+        else:
+            gb_pct = None
+            fb_pct = None
+
         splits[batter_id] = {
             "xwoba": overall,
             "xwoba_L": vs_l_mean if not math.isnan(vs_l_mean) else None,
             "xwoba_R": vs_r_mean if not math.isnan(vs_r_mean) else None,
             "pa": len(pa_events),
+            "gb_pct": gb_pct,
+            "fb_pct": fb_pct,
         }
 
     return splits
@@ -205,6 +217,16 @@ def get_pitcher_xwoba(pitcher_id, date):
     vs_l_mean = vs_l.mean() if not vs_l.empty else float("nan")
     vs_r_mean = vs_r.mean() if not vs_r.empty else float("nan")
 
+    # GB% and FB% based on batted ball type classification
+    batted = pa_events[pa_events["bb_type"].notna()]
+    n_batted = len(batted)
+    if n_batted > 0:
+        gb_pct = (batted["bb_type"] == "ground_ball").sum() / n_batted * 100
+        fb_pct = (batted["bb_type"] == "fly_ball").sum() / n_batted * 100
+    else:
+        gb_pct = None
+        fb_pct = None
+
     # Determine pitcher's throwing hand from the data
     throws = "R"
     if "p_throws" in data.columns and not data["p_throws"].empty:
@@ -215,6 +237,8 @@ def get_pitcher_xwoba(pitcher_id, date):
         "xwoba_L": vs_l_mean if not math.isnan(vs_l_mean) else None,
         "xwoba_R": vs_r_mean if not math.isnan(vs_r_mean) else None,
         "pa": pa_count,
+        "gb_pct": gb_pct,
+        "fb_pct": fb_pct,
         "throws": throws,
     }
 
@@ -255,7 +279,7 @@ def build_lineup_card(team_abbrev, date, side, away_name, home_name,
     # Build formatted output as a list of strings, then join at the end.
     # In Python, building a list and joining is idiomatic — more like
     # Array<String> in Swift than repeated string concatenation.
-    W = 73
+    W = 85
     lines = []
     lines.append("=" * W)
     lines.append(f"  {team_abbrev} Batting Lineup — {date}".center(W))
@@ -269,17 +293,23 @@ def build_lineup_card(team_abbrev, date, side, away_name, home_name,
         n = p.get("number", "")
         return f"#{n:>2}" if n else "   "
 
+    def fmt_pct(val):
+        """Format a percentage value like '45%' or ' --' if missing."""
+        return f"{val:.0f}%" if val is not None else " --"
+
     def pitcher_line(p, stats):
         s = stats.get(p["mlbam_id"])
         num = fmt_num(p)
         if not s:
-            return f"      {num} {p['name']:<21} {'':4} {'--':>5}  {'--':>5}  {'--':>5}  {'--':>5}"
+            return f"      {num} {p['name']:<21} {'':4} {'--':>5}  {'--':>5}  {'--':>5}  {'--':>5}  {'--':>4}  {'--':>4}"
         pos = s["throws"] + "HP"
         xw = format_xwoba(s["xwoba"])
         xl = format_xwoba(s["xwoba_L"]) if s["xwoba_L"] is not None else " -- "
         xr = format_xwoba(s["xwoba_R"]) if s["xwoba_R"] is not None else " -- "
         pa = s["pa"]
-        return f"      {num} {p['name']:<21} {pos:<4} {xw:>5}  {xl:>5}  {xr:>5}  {pa:>5}"
+        gb = fmt_pct(s.get("gb_pct"))
+        fb = fmt_pct(s.get("fb_pct"))
+        return f"      {num} {p['name']:<21} {pos:<4} {xw:>5}  {xl:>5}  {xr:>5}  {pa:>5}  {gb:>4}  {fb:>4}"
 
     if opp_starter:
         s = opp_starter_stats.get(opp_starter["mlbam_id"])
@@ -291,12 +321,14 @@ def build_lineup_card(team_abbrev, date, side, away_name, home_name,
             xr = format_xwoba(s["xwoba_R"]) if s["xwoba_R"] is not None else " -- "
             pa = s["pa"]
             lines.append(f"  Opposing SP: {num} {opp_starter['name']} ({throws}HP)")
-            lines.append(f"  xwOBA against: {xw}   vL: {xl}   vR: {xr}   ({pa} PA)")
+            gb = fmt_pct(s.get("gb_pct"))
+            fb = fmt_pct(s.get("fb_pct"))
+            lines.append(f"  xwOBA against: {xw}   vL: {xl}   vR: {xr}   ({pa} PA)   GB: {gb}  FB: {fb}")
         else:
             lines.append(f"  Opposing SP: {num} {opp_starter['name']} (no Statcast data)")
         lines.append("  " + "-" * (W - 4))
 
-    hdr = f"  {'#':>2}  {'Uni':>3} {'Player':<21} {'Pos':<4} {'xwOBA':>5}  {'vL':>5}  {'vR':>5}  {'PA':>5}"
+    hdr = f"  {'#':>2}  {'Uni':>3} {'Player':<21} {'Pos':<4} {'xwOBA':>5}  {'vL':>5}  {'vR':>5}  {'PA':>5}  {'GB%':>4}  {'FB%':>4}"
     lines.append(hdr)
     lines.append("  " + "-" * (W - 4))
 
@@ -307,7 +339,9 @@ def build_lineup_card(team_abbrev, date, side, away_name, home_name,
         xl = format_xwoba(s["xwoba_L"]) if s.get("xwoba_L") is not None else " -- "
         xr = format_xwoba(s["xwoba_R"]) if s.get("xwoba_R") is not None else " -- "
         pa = s.get("pa", 0)
-        return f"  {prefix} {num} {p['name']:<21} {p['position']:<4} {xw:>5}  {xl:>5}  {xr:>5}  {pa:>5}"
+        gb = fmt_pct(s.get("gb_pct"))
+        fb = fmt_pct(s.get("fb_pct"))
+        return f"  {prefix} {num} {p['name']:<21} {p['position']:<4} {xw:>5}  {xl:>5}  {xr:>5}  {pa:>5}  {gb:>4}  {fb:>4}"
 
     for i, p in enumerate(starters, 1):
         lines.append(player_line(f"{i:>2}.", p))
@@ -321,13 +355,13 @@ def build_lineup_card(team_abbrev, date, side, away_name, home_name,
 
     if own_starter:
         lines.append("")
-        lines.append(f"  {'Starting Pitcher':<29} {'Pos':<4} {'xwOBA':>5}  {'vL':>5}  {'vR':>5}  {'PA':>5}")
+        lines.append(f"  {'Starting Pitcher':<29} {'Pos':<4} {'xwOBA':>5}  {'vL':>5}  {'vR':>5}  {'PA':>5}  {'GB%':>4}  {'FB%':>4}")
         lines.append("  " + "-" * (W - 4))
         lines.append(pitcher_line(own_starter, own_pitcher_stats))
 
     if own_bullpen:
         lines.append("")
-        lines.append(f"  {'Bullpen':<29} {'Pos':<4} {'xwOBA':>5}  {'vL':>5}  {'vR':>5}  {'PA':>5}")
+        lines.append(f"  {'Bullpen':<29} {'Pos':<4} {'xwOBA':>5}  {'vL':>5}  {'vR':>5}  {'PA':>5}  {'GB%':>4}  {'FB%':>4}")
         lines.append("  " + "-" * (W - 4))
         for p in own_bullpen:
             lines.append(pitcher_line(p, own_pitcher_stats))
