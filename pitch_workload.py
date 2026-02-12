@@ -9,6 +9,25 @@ from datetime import datetime, timedelta
 from pybaseball import statcast_pitcher
 
 
+def pitched_consecutive_days(daily_list, ref_date, n=3):
+    """Check if the pitcher threw in each of the `n` days immediately before ref_date.
+
+    Args:
+        daily_list: list of {"date": str, "pitches": int} from get_recent_workload.
+        ref_date: Reference date as 'YYYY-MM-DD' (the game day — not included).
+        n: Number of consecutive days to check (default 3).
+
+    Returns:
+        True if the pitcher pitched on each of the n days before ref_date.
+    """
+    ref = datetime.strptime(ref_date, "%Y-%m-%d")
+    dates_pitched = {d["date"] for d in daily_list}
+    return all(
+        (ref - timedelta(days=i)).strftime("%Y-%m-%d") in dates_pitched
+        for i in range(1, n + 1)
+    )
+
+
 def get_recent_workload(pitcher_id, date, days_back=4):
     """Get pitch counts per day for a pitcher over the last `days_back` days.
 
@@ -52,7 +71,8 @@ def get_recent_workload(pitcher_id, date, days_back=4):
     ]
 
     total = sum(d["pitches"] for d in daily_list)
-    return {"daily": daily_list, "total": total}
+    consec = pitched_consecutive_days(daily_list, date, n=3)
+    return {"daily": daily_list, "total": total, "three_straight": consec}
 
 
 def get_team_workloads(pitcher_ids, date, days_back=4):
@@ -97,3 +117,5 @@ if __name__ == "__main__":
         for day in result["daily"]:
             print(f"  {day['date']}:  {day['pitches']} pitches")
         print(f"\n  Total: {result['total']} pitches")
+        if result["three_straight"]:
+            print("  ** Pitched 3 days in a row **")
