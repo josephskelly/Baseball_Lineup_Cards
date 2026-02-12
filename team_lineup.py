@@ -331,8 +331,6 @@ def build_lineup_card(team_abbrev, date, side, away_name, home_name,
         for p in own_bullpen:
             lines.append(pitcher_line(p, own_pitcher_stats))
 
-    lines.append("")
-    lines.append(f"  Total eligible batters: {len(position_players)}")
     lines.append("=" * W)
 
     return "\n".join(lines)
