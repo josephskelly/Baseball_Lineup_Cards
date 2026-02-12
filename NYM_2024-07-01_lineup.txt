@@ -24,6 +24,10 @@
       DJ Stewart               RF    .341   .238   .350
       Luis Torrens             C     .432   .362   .473
 
+  Starting Pitcher             xwOBA     vL     vR
+  --------------------------------------------------------------
+      David Peterson (LHP)      .376   .351   .384  (146 PA)
+
   Bullpen                      xwOBA     vL     vR
   --------------------------------------------------------------
       Adam Ottavino (RHP)       .277   .357   .222  (140 PA)

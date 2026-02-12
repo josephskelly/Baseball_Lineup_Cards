@@ -224,7 +224,7 @@ def format_xwoba(val):
 def build_lineup_card(team_abbrev, date, side, away_name, home_name,
                       position_players, batting_order, batter_splits,
                       opp_starter, opp_starter_stats,
-                      own_bullpen, own_pitcher_stats):
+                      own_starter, own_bullpen, own_pitcher_stats):
     """Format a single team's lineup card as a string.
 
     This is a pure formatting function — all data has already been fetched
@@ -308,6 +308,12 @@ def build_lineup_card(team_abbrev, date, side, away_name, home_name,
         for p in bench:
             lines.append(player_line("   ", p))
 
+    if own_starter:
+        lines.append("")
+        lines.append("  Starting Pitcher" + " " * 13 + "xwOBA     vL     vR")
+        lines.append("  " + "-" * (W - 4))
+        lines.append(pitcher_line(own_starter, own_pitcher_stats))
+
     if own_bullpen:
         lines.append("")
         lines.append("  Bullpen" + " " * 22 + "xwOBA     vL     vR")
@@ -363,12 +369,13 @@ def get_game_lineups(team, date):
             if stats:
                 opp_starter_stats[opp_starter["mlbam_id"]] = stats
 
-        # Extract this team's own bullpen
+        # Extract this team's own starter and bullpen
         own_starter, own_bullpen = extract_pitchers(live_feed, side)
         own_pitcher_stats = {}
-        if own_bullpen:
-            print(f"Fetching xwOBA against for {len(own_bullpen)} {abbrev} relievers...")
-            for p in own_bullpen:
+        all_own_pitchers = ([own_starter] if own_starter else []) + own_bullpen
+        if all_own_pitchers:
+            print(f"Fetching xwOBA against for {len(all_own_pitchers)} {abbrev} pitchers...")
+            for p in all_own_pitchers:
                 stats = get_pitcher_xwoba(p["mlbam_id"], date)
                 if stats:
                     own_pitcher_stats[p["mlbam_id"]] = stats
@@ -382,7 +389,7 @@ def get_game_lineups(team, date):
             abbrev, date, side, away_name, home_name,
             position_players, batting_order, batter_splits,
             opp_starter, opp_starter_stats,
-            own_bullpen, own_pitcher_stats,
+            own_starter, own_bullpen, own_pitcher_stats,
         )
         results[abbrev] = card
         print(card)

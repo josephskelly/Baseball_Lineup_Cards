@@ -24,6 +24,10 @@
       Drew Millas              PR    .251   .155   .294
       Nasim Nuñez              SS    .146   .111   .195
 
+  Starting Pitcher             xwOBA     vL     vR
+  --------------------------------------------------------------
+      MacKenzie Gore (LHP)      .305   .315   .302  (392 PA)
+
   Bullpen                      xwOBA     vL     vR
   --------------------------------------------------------------
       DJ Herz (LHP)             .319   .385   .303  ( 98 PA)
