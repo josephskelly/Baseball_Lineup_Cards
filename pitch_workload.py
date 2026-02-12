@@ -1,87 +1,71 @@
 """Calculate recent pitch workload for pitchers.
 
-Looks back over the last N days (default 4) using Statcast pitch-level
-data and returns the total number of pitches thrown per day, plus the
-overall total.
+Looks back over the last 3 days using Statcast pitch-level data and
+returns per-day pitch counts so a lineup card can show at a glance how
+heavily a reliever has been used.
 """
 
 from datetime import datetime, timedelta
 from pybaseball import statcast_pitcher
 
 
-def pitched_consecutive_days(daily_list, ref_date, n=3):
-    """Check if the pitcher threw in each of the `n` days immediately before ref_date.
-
-    Args:
-        daily_list: list of {"date": str, "pitches": int} from get_recent_workload.
-        ref_date: Reference date as 'YYYY-MM-DD' (the game day — not included).
-        n: Number of consecutive days to check (default 3).
-
-    Returns:
-        True if the pitcher pitched on each of the n days before ref_date.
-    """
-    ref = datetime.strptime(ref_date, "%Y-%m-%d")
-    dates_pitched = {d["date"] for d in daily_list}
-    return all(
-        (ref - timedelta(days=i)).strftime("%Y-%m-%d") in dates_pitched
-        for i in range(1, n + 1)
-    )
-
-
-def get_recent_workload(pitcher_id, date, days_back=4):
-    """Get pitch counts per day for a pitcher over the last `days_back` days.
+def get_recent_workload(pitcher_id, date):
+    """Get pitch counts for each of the 3 days before a game.
 
     Args:
         pitcher_id: MLB AM ID for the pitcher.
-        date: Reference date as 'YYYY-MM-DD'. Pitches on this date are
-              NOT included — only the preceding `days_back` days.
-        days_back: Number of days to look back (default 4).
+        date: Game date as 'YYYY-MM-DD'. Pitches on this date are
+              NOT included — only the preceding 3 days.
 
     Returns:
         dict with:
-            "daily": list of {"date": str, "pitches": int} for days pitched,
-            "total": int total pitches across the window.
+            "last_3": list of {"date": str, "pitches": int} for each of the
+                      3 days before the game (most recent first), with 0
+                      pitches for days the pitcher did not appear.
     """
     ref = datetime.strptime(date, "%Y-%m-%d")
-    start = ref - timedelta(days=days_back)
+    start = ref - timedelta(days=3)
     end = ref - timedelta(days=1)
 
     start_str = start.strftime("%Y-%m-%d")
     end_str = end.strftime("%Y-%m-%d")
 
+    # Build the 3-day scaffold (most recent day first)
+    last_3_dates = [
+        (ref - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(1, 4)
+    ]
+
     try:
         data = statcast_pitcher(start_str, end_str, pitcher_id)
     except Exception:
-        return {"daily": [], "total": 0}
+        return {"last_3": [{"date": d, "pitches": 0} for d in last_3_dates]}
 
     if data.empty:
-        return {"daily": [], "total": 0}
+        return {"last_3": [{"date": d, "pitches": 0} for d in last_3_dates]}
 
     # Each row is one pitch; group by game date and count
     daily = (
         data.groupby("game_date")
         .size()
         .reset_index(name="pitches")
-        .sort_values("game_date")
     )
-
-    daily_list = [
-        {"date": str(row["game_date"]).split(" ")[0], "pitches": int(row["pitches"])}
+    pitch_map = {
+        str(row["game_date"]).split(" ")[0]: int(row["pitches"])
         for _, row in daily.iterrows()
+    }
+
+    last_3 = [
+        {"date": d, "pitches": pitch_map.get(d, 0)} for d in last_3_dates
     ]
-
-    total = sum(d["pitches"] for d in daily_list)
-    consec = pitched_consecutive_days(daily_list, date, n=3)
-    return {"daily": daily_list, "total": total, "three_straight": consec}
+    return {"last_3": last_3}
 
 
-def get_team_workloads(pitcher_ids, date, days_back=4):
+def get_team_workloads(pitcher_ids, date):
     """Get recent pitch workload for a list of pitchers.
 
     Args:
         pitcher_ids: list of (mlbam_id, name) tuples.
-        date: Reference date as 'YYYY-MM-DD'.
-        days_back: Number of days to look back (default 4).
+        date: Game date as 'YYYY-MM-DD'.
 
     Returns:
         dict mapping mlbam_id -> workload result from get_recent_workload.
@@ -89,7 +73,7 @@ def get_team_workloads(pitcher_ids, date, days_back=4):
     results = {}
     for pid, name in pitcher_ids:
         print(f"  Fetching workload for {name}...")
-        results[pid] = get_recent_workload(pid, date, days_back)
+        results[pid] = get_recent_workload(pid, date)
     return results
 
 
@@ -100,22 +84,18 @@ if __name__ == "__main__":
         description="Show recent pitch workload for pitchers in a game."
     )
     parser.add_argument("pitcher_id", type=int, help="MLB AM pitcher ID")
-    parser.add_argument("date", help="Reference date (YYYY-MM-DD)")
-    parser.add_argument(
-        "--days", type=int, default=4, help="Days to look back (default 4)"
-    )
+    parser.add_argument("date", help="Game date (YYYY-MM-DD)")
     args = parser.parse_args()
 
     print(f"Pitch workload for pitcher {args.pitcher_id}, "
-          f"{args.days} days before {args.date}:\n")
+          f"3 days before {args.date}:\n")
 
-    result = get_recent_workload(args.pitcher_id, args.date, args.days)
+    result = get_recent_workload(args.pitcher_id, args.date)
 
-    if not result["daily"]:
-        print("  No pitches found in this window.")
-    else:
-        for day in result["daily"]:
-            print(f"  {day['date']}:  {day['pitches']} pitches")
-        print(f"\n  Total: {result['total']} pitches")
-        if result["three_straight"]:
-            print("  ** Pitched 3 days in a row **")
+    for day in result["last_3"]:
+        label = f"{day['pitches']} pitches" if day["pitches"] else "-"
+        print(f"  {day['date']}:  {label}")
+
+    pitched_all_3 = all(d["pitches"] > 0 for d in result["last_3"])
+    if pitched_all_3:
+        print("\n  *** 3 days in a row — unavailable ***")
