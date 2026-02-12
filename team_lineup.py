@@ -321,13 +321,13 @@ def build_lineup_card(team_abbrev, date, side, away_name, home_name,
 
     if own_starter:
         lines.append("")
-        lines.append("  Starting Pitcher" + " " * 13 + "xwOBA     vL     vR     PA")
+        lines.append(f"  {'Starting Pitcher':<29} {'Pos':<4} {'xwOBA':>5}  {'vL':>5}  {'vR':>5}  {'PA':>5}")
         lines.append("  " + "-" * (W - 4))
         lines.append(pitcher_line(own_starter, own_pitcher_stats))
 
     if own_bullpen:
         lines.append("")
-        lines.append("  Bullpen" + " " * 22 + "xwOBA     vL     vR     PA")
+        lines.append(f"  {'Bullpen':<29} {'Pos':<4} {'xwOBA':>5}  {'vL':>5}  {'vR':>5}  {'PA':>5}")
         lines.append("  " + "-" * (W - 4))
         for p in own_bullpen:
             lines.append(pitcher_line(p, own_pitcher_stats))

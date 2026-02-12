@@ -24,11 +24,11 @@
       #29 DJ Stewart            RF    .341   .238   .350    155
       #13 Luis Torrens          C     .432   .362   .473     32
 
-  Starting Pitcher             xwOBA     vL     vR     PA
+  Starting Pitcher              Pos  xwOBA     vL     vR     PA
   ---------------------------------------------------------------------
       #23 David Peterson        LHP   .376   .351   .384    146
 
-  Bullpen                      xwOBA     vL     vR     PA
+  Bullpen                       Pos  xwOBA     vL     vR     PA
   ---------------------------------------------------------------------
       # 0 Adam Ottavino         RHP   .277   .357   .222    140
       #35 Adrian Houser         RHP   .346   .371   .319    268

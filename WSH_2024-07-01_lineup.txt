@@ -24,11 +24,11 @@
       #81 Drew Millas           PR    .251   .155   .294     32
       #26 Nasim Nuñez           SS    .146   .111   .195     12
 
-  Starting Pitcher             xwOBA     vL     vR     PA
+  Starting Pitcher              Pos  xwOBA     vL     vR     PA
   ---------------------------------------------------------------------
       # 1 MacKenzie Gore        LHP   .305   .315   .302    392
 
-  Bullpen                      xwOBA     vL     vR     PA
+  Bullpen                       Pos  xwOBA     vL     vR     PA
   ---------------------------------------------------------------------
       #74 DJ Herz               LHP   .319   .385   .303     98
       #58 Derek Law             RHP   .307   .265   .333    207
