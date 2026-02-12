@@ -144,8 +144,8 @@ def get_xwoba_splits(batter_ids, date):
 
         splits[batter_id] = {
             "xwoba": overall,
-            "diff_L": vs_l_mean - overall if not math.isnan(vs_l_mean) else None,
-            "diff_R": vs_r_mean - overall if not math.isnan(vs_r_mean) else None,
+            "xwoba_L": vs_l_mean if not math.isnan(vs_l_mean) else None,
+            "xwoba_R": vs_r_mean if not math.isnan(vs_r_mean) else None,
         }
 
     return splits
@@ -202,12 +202,6 @@ def format_xwoba(val):
     """Format xwOBA in baseball convention (no leading zero): .345"""
     return f".{val * 1000:03.0f}"
 
-
-def format_diff(val):
-    """Format a split diff as a signed value: +0.032 or -0.015"""
-    if val is None:
-        return "  --  "
-    return f"{val:+.3f}"
 
 
 def get_team_lineup(team, date):
@@ -288,10 +282,10 @@ def get_team_lineup(team, date):
 
     def player_line(prefix, p):
         s = splits.get(p["mlbam_id"], {})
-        xw = format_xwoba(s["xwoba"]) if "xwoba" in s else " --  "
-        dl = format_diff(s.get("diff_L"))
-        dr = format_diff(s.get("diff_R"))
-        return f"  {prefix} {p['name']:<24} {p['position']:<4} {xw:>5}  {dl:>6}  {dr:>6}"
+        xw = format_xwoba(s["xwoba"]) if "xwoba" in s else " -- "
+        xl = format_xwoba(s["xwoba_L"]) if s.get("xwoba_L") is not None else " -- "
+        xr = format_xwoba(s["xwoba_R"]) if s.get("xwoba_R") is not None else " -- "
+        return f"  {prefix} {p['name']:<24} {p['position']:<4} {xw:>5}  {xl:>5}  {xr:>5}"
 
     for i, p in enumerate(starters, 1):
         lines.append(player_line(f"{i:>2}.", p))
