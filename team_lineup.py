@@ -63,8 +63,12 @@ def get_all_position_players(game_pk, team):
     return position_players, side
 
 
-def get_opposing_pitcher(game_pk, side):
-    """Get the opposing team's starting pitcher from the boxscore."""
+def get_opposing_pitchers(game_pk, side):
+    """Get the opposing team's starter and all bullpen arms from the boxscore.
+
+    Returns (starter, bullpen) where starter is a dict and bullpen is a list.
+    All rostered pitchers except the starter are considered bullpen.
+    """
     opp_side = "home" if side == "away" else "away"
 
     resp = requests.get(f"https://statsapi.mlb.com/api/v1.1/game/{game_pk}/feed/live")
@@ -74,19 +78,28 @@ def get_opposing_pitcher(game_pk, side):
     players = game_data["liveData"]["boxscore"]["teams"][opp_side]["players"]
     pitchers_list = game_data["liveData"]["boxscore"]["teams"][opp_side].get("pitchers", [])
     if not pitchers_list:
-        return None
+        return None, []
 
     # The first pitcher in the pitchers list is the starter
     starter_id = pitchers_list[0]
-    pdata = players.get(f"ID{starter_id}")
-    if not pdata:
-        return None
 
-    return {
-        "mlbam_id": starter_id,
-        "name": pdata["person"]["fullName"],
-        "throws": pdata.get("position", {}).get("abbreviation", "P"),
-    }
+    # Collect all rostered pitchers (position == "P")
+    starter = None
+    bullpen = []
+    for pid, pdata in players.items():
+        if pdata["position"]["abbreviation"] != "P":
+            continue
+        info = {
+            "mlbam_id": pdata["person"]["id"],
+            "name": pdata["person"]["fullName"],
+        }
+        if pdata["person"]["id"] == starter_id:
+            starter = info
+        else:
+            bullpen.append(info)
+
+    bullpen.sort(key=lambda x: x["name"])
+    return starter, bullpen
 
 
 def get_batting_order(game_pk, side, date):
@@ -225,12 +238,16 @@ def get_team_lineup(team, date):
     home_name = game_info["teams"]["home"]["team"]["name"]
     is_home = side == "home"
 
-    # Fetch opposing starter pitcher info and xwOBA against
-    opp_pitcher = get_opposing_pitcher(game_pk, side)
-    pitcher_stats = None
-    if opp_pitcher:
-        print(f"Fetching xwOBA against for {opp_pitcher['name']}...")
-        pitcher_stats = get_pitcher_xwoba(opp_pitcher["mlbam_id"], date)
+    # Fetch opposing pitchers (starter + bullpen) and their xwOBA against
+    opp_starter, opp_bullpen = get_opposing_pitchers(game_pk, side)
+    pitcher_stats = {}
+    all_opp_pitchers = ([opp_starter] if opp_starter else []) + opp_bullpen
+    if all_opp_pitchers:
+        print(f"Fetching xwOBA against for {len(all_opp_pitchers)} opposing pitchers...")
+        for p in all_opp_pitchers:
+            stats = get_pitcher_xwoba(p["mlbam_id"], date)
+            if stats:
+                pitcher_stats[p["mlbam_id"]] = stats
 
     # Fetch season xwOBA splits for all position players
     batter_ids = [p["mlbam_id"] for p in position_players]
@@ -263,17 +280,30 @@ def get_team_lineup(team, date):
     lines.append("=" * W)
 
     # Opposing pitcher section
-    if opp_pitcher and pitcher_stats:
-        throws = pitcher_stats["throws"]
-        xw = format_xwoba(pitcher_stats["xwoba"])
-        xl = format_xwoba(pitcher_stats["xwoba_L"]) if pitcher_stats["xwoba_L"] is not None else " -- "
-        xr = format_xwoba(pitcher_stats["xwoba_R"]) if pitcher_stats["xwoba_R"] is not None else " -- "
-        pa = pitcher_stats["pa"]
-        lines.append(f"  Opposing SP: {opp_pitcher['name']} ({throws}HP)")
-        lines.append(f"  xwOBA against: {xw}   vL: {xl}   vR: {xr}   ({pa} PA)")
-        lines.append("  " + "-" * (W - 4))
-    elif opp_pitcher:
-        lines.append(f"  Opposing SP: {opp_pitcher['name']} (no Statcast data)")
+    def pitcher_line(p):
+        s = pitcher_stats.get(p["mlbam_id"])
+        if not s:
+            return f"      {p['name']:<24}       (no Statcast data)"
+        throws = s["throws"]
+        name = f"{p['name']} ({throws}HP)"
+        xw = format_xwoba(s["xwoba"])
+        xl = format_xwoba(s["xwoba_L"]) if s["xwoba_L"] is not None else " -- "
+        xr = format_xwoba(s["xwoba_R"]) if s["xwoba_R"] is not None else " -- "
+        pa = s["pa"]
+        return f"      {name:<24} {xw:>5}  {xl:>5}  {xr:>5}  ({pa:>3} PA)"
+
+    if opp_starter:
+        s = pitcher_stats.get(opp_starter["mlbam_id"])
+        if s:
+            throws = s["throws"]
+            xw = format_xwoba(s["xwoba"])
+            xl = format_xwoba(s["xwoba_L"]) if s["xwoba_L"] is not None else " -- "
+            xr = format_xwoba(s["xwoba_R"]) if s["xwoba_R"] is not None else " -- "
+            pa = s["pa"]
+            lines.append(f"  Opposing SP: {opp_starter['name']} ({throws}HP)")
+            lines.append(f"  xwOBA against: {xw}   vL: {xl}   vR: {xr}   ({pa} PA)")
+        else:
+            lines.append(f"  Opposing SP: {opp_starter['name']} (no Statcast data)")
         lines.append("  " + "-" * (W - 4))
 
     hdr = f"  {'#':>2}   {'Player':<24} {'Pos':<4} {'xwOBA':>5}  {'vL':>6}  {'vR':>6}"
@@ -296,6 +326,13 @@ def get_team_lineup(team, date):
         lines.append("  " + "-" * (W - 4))
         for p in bench:
             lines.append(player_line("   ", p))
+
+    if opp_bullpen:
+        lines.append("")
+        lines.append("  Bullpen" + " " * 22 + "xwOBA     vL     vR")
+        lines.append("  " + "-" * (W - 4))
+        for p in opp_bullpen:
+            lines.append(pitcher_line(p))
 
     lines.append("")
     lines.append(f"  Total eligible batters: {len(position_players)}")
