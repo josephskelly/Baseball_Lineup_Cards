@@ -166,6 +166,7 @@ def get_xwoba_splits(batter_ids, date):
             "xwoba": overall,
             "xwoba_L": vs_l_mean if not math.isnan(vs_l_mean) else None,
             "xwoba_R": vs_r_mean if not math.isnan(vs_r_mean) else None,
+            "pa": len(pa_events),
         }
 
     return splits
@@ -254,7 +255,7 @@ def build_lineup_card(team_abbrev, date, side, away_name, home_name,
     # Build formatted output as a list of strings, then join at the end.
     # In Python, building a list and joining is idiomatic — more like
     # Array<String> in Swift than repeated string concatenation.
-    W = 66
+    W = 73
     lines = []
     lines.append("=" * W)
     lines.append(f"  {team_abbrev} Batting Lineup — {date}".center(W))
@@ -272,14 +273,13 @@ def build_lineup_card(team_abbrev, date, side, away_name, home_name,
         s = stats.get(p["mlbam_id"])
         num = fmt_num(p)
         if not s:
-            return f"   {num} {p['name']:<24}       (no Statcast data)"
-        throws = s["throws"]
-        name = f"{p['name']} ({throws}HP)"
+            return f"      {num} {p['name']:<21} {'':4} {'--':>5}  {'--':>5}  {'--':>5}  {'--':>5}"
+        pos = s["throws"] + "HP"
         xw = format_xwoba(s["xwoba"])
         xl = format_xwoba(s["xwoba_L"]) if s["xwoba_L"] is not None else " -- "
         xr = format_xwoba(s["xwoba_R"]) if s["xwoba_R"] is not None else " -- "
         pa = s["pa"]
-        return f"   {num} {name:<24} {xw:>5}  {xl:>5}  {xr:>5}  ({pa:>3} PA)"
+        return f"      {num} {p['name']:<21} {pos:<4} {xw:>5}  {xl:>5}  {xr:>5}  {pa:>5}"
 
     if opp_starter:
         s = opp_starter_stats.get(opp_starter["mlbam_id"])
@@ -296,7 +296,7 @@ def build_lineup_card(team_abbrev, date, side, away_name, home_name,
             lines.append(f"  Opposing SP: {num} {opp_starter['name']} (no Statcast data)")
         lines.append("  " + "-" * (W - 4))
 
-    hdr = f"  {'#':>2}  {'Uni':>3} {'Player':<21} {'Pos':<4} {'xwOBA':>5}  {'vL':>5}  {'vR':>5}"
+    hdr = f"  {'#':>2}  {'Uni':>3} {'Player':<21} {'Pos':<4} {'xwOBA':>5}  {'vL':>5}  {'vR':>5}  {'PA':>5}"
     lines.append(hdr)
     lines.append("  " + "-" * (W - 4))
 
@@ -306,7 +306,8 @@ def build_lineup_card(team_abbrev, date, side, away_name, home_name,
         xw = format_xwoba(s["xwoba"]) if "xwoba" in s else " -- "
         xl = format_xwoba(s["xwoba_L"]) if s.get("xwoba_L") is not None else " -- "
         xr = format_xwoba(s["xwoba_R"]) if s.get("xwoba_R") is not None else " -- "
-        return f"  {prefix} {num} {p['name']:<21} {p['position']:<4} {xw:>5}  {xl:>5}  {xr:>5}"
+        pa = s.get("pa", 0)
+        return f"  {prefix} {num} {p['name']:<21} {p['position']:<4} {xw:>5}  {xl:>5}  {xr:>5}  {pa:>5}"
 
     for i, p in enumerate(starters, 1):
         lines.append(player_line(f"{i:>2}.", p))
@@ -320,13 +321,13 @@ def build_lineup_card(team_abbrev, date, side, away_name, home_name,
 
     if own_starter:
         lines.append("")
-        lines.append("  Starting Pitcher" + " " * 13 + "xwOBA     vL     vR")
+        lines.append("  Starting Pitcher" + " " * 13 + "xwOBA     vL     vR     PA")
         lines.append("  " + "-" * (W - 4))
         lines.append(pitcher_line(own_starter, own_pitcher_stats))
 
     if own_bullpen:
         lines.append("")
-        lines.append("  Bullpen" + " " * 22 + "xwOBA     vL     vR")
+        lines.append("  Bullpen" + " " * 22 + "xwOBA     vL     vR     PA")
         lines.append("  " + "-" * (W - 4))
         for p in own_bullpen:
             lines.append(pitcher_line(p, own_pitcher_stats))
