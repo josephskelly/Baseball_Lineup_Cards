@@ -11,6 +11,7 @@ import math
 import sys
 import requests
 from pybaseball import statcast, statcast_batter, statcast_pitcher
+from pitch_workload import get_team_workloads
 
 # Statcast abbreviation -> MLB Stats API team ID
 TEAM_IDS = {
@@ -251,7 +252,8 @@ def format_xwoba(val):
 def build_lineup_card(team_abbrev, date, side, away_name, home_name,
                       position_players, batting_order, batter_splits,
                       opp_starter, opp_starter_stats,
-                      own_starter, own_bullpen, own_pitcher_stats):
+                      own_starter, own_bullpen, own_pitcher_stats,
+                      bullpen_workloads=None):
     """Format a single team's lineup card as a string.
 
     This is a pure formatting function — all data has already been fetched
@@ -360,11 +362,33 @@ def build_lineup_card(team_abbrev, date, side, away_name, home_name,
         lines.append(pitcher_line(own_starter, own_pitcher_stats))
 
     if own_bullpen:
+        workloads = bullpen_workloads or {}
+
+        # Build date labels from the first available workload, or derive from game date
+        if workloads:
+            sample = next(iter(workloads.values()))
+            day_labels = [d["date"][5:] for d in sample["last_3"]]  # "MM-DD"
+        else:
+            from datetime import datetime as _dt, timedelta as _td
+            ref = _dt.strptime(date, "%Y-%m-%d")
+            day_labels = [(ref - _td(days=i)).strftime("%m-%d") for i in range(1, 4)]
+
         lines.append("")
-        lines.append(f"  {'Bullpen':<29} {'Pos':<4} {'xwOBA':>5}  {'vL':>5}  {'vR':>5}  {'PA':>5}  {'GB%':>4}  {'FB%':>4}")
-        lines.append("  " + "-" * (W - 4))
+        pitch_log_hdr = "  ".join(f"{dl:>5}" for dl in day_labels)
+        lines.append(
+            f"  {'Bullpen':<29} {'Pos':<4} {'xwOBA':>5}  {'vL':>5}  {'vR':>5}"
+            f"  {'PA':>5}  {'GB%':>4}  {'FB%':>4}  | {'Pitch Log':^19}"
+        )
+        lines.append("  " + "-" * (W - 4) + "--+-" + "-" * 19)
         for p in own_bullpen:
-            lines.append(pitcher_line(p, own_pitcher_stats))
+            base = pitcher_line(p, own_pitcher_stats)
+            wl = workloads.get(p["mlbam_id"])
+            if wl:
+                counts = "  ".join(f"{d['pitches']:>5}" if d["pitches"] else "    -" for d in wl["last_3"])
+            else:
+                counts = "  ".join(f"{'--':>5}" for _ in range(3))
+            lines.append(f"{base}  | {counts}")
+        lines.append(f"  {'':29} {'':4} {'':5}  {'':5}  {'':5}  {'':5}  {'':4}  {'':4}  | {pitch_log_hdr}")
 
     lines.append("=" * W)
 
@@ -423,6 +447,13 @@ def get_game_lineups(team, date):
                 if stats:
                     own_pitcher_stats[p["mlbam_id"]] = stats
 
+        # Fetch pitch log (last 3 days) for bullpen arms
+        bullpen_workloads = {}
+        if own_bullpen:
+            print(f"Fetching pitch log for {len(own_bullpen)} {abbrev} bullpen arms...")
+            bp_ids = [(p["mlbam_id"], p["name"]) for p in own_bullpen]
+            bullpen_workloads = get_team_workloads(bp_ids, date)
+
         # Fetch xwOBA splits for all batters
         batter_ids = [p["mlbam_id"] for p in position_players]
         print(f"Fetching xwOBA splits for {len(batter_ids)} {abbrev} batters...")
@@ -433,6 +464,7 @@ def get_game_lineups(team, date):
             position_players, batting_order, batter_splits,
             opp_starter, opp_starter_stats,
             own_starter, own_bullpen, own_pitcher_stats,
+            bullpen_workloads,
         )
         results[abbrev] = card
         print(card)
