@@ -69,6 +69,7 @@ def extract_position_players(live_feed, side):
         position_players.append({
             "mlbam_id": pdata["person"]["id"],
             "name": pdata["person"]["fullName"],
+            "number": pdata.get("jerseyNumber", ""),
             "position": pos,
             "pa": pdata.get("stats", {}).get("batting", {}).get("plateAppearances", 0),
         })
@@ -98,6 +99,7 @@ def extract_pitchers(live_feed, side):
         info = {
             "mlbam_id": pdata["person"]["id"],
             "name": pdata["person"]["fullName"],
+            "number": pdata.get("jerseyNumber", ""),
         }
         if pdata["person"]["id"] == starter_id:
             starter = info
@@ -261,42 +263,50 @@ def build_lineup_card(team_abbrev, date, side, away_name, home_name,
     lines.append("=" * W)
 
     # Opposing starter at the top
+    def fmt_num(p):
+        """Format jersey number as '#12' or '   ' if missing."""
+        n = p.get("number", "")
+        return f"#{n:>2}" if n else "   "
+
     def pitcher_line(p, stats):
         s = stats.get(p["mlbam_id"])
+        num = fmt_num(p)
         if not s:
-            return f"      {p['name']:<24}       (no Statcast data)"
+            return f"   {num} {p['name']:<24}       (no Statcast data)"
         throws = s["throws"]
         name = f"{p['name']} ({throws}HP)"
         xw = format_xwoba(s["xwoba"])
         xl = format_xwoba(s["xwoba_L"]) if s["xwoba_L"] is not None else " -- "
         xr = format_xwoba(s["xwoba_R"]) if s["xwoba_R"] is not None else " -- "
         pa = s["pa"]
-        return f"      {name:<24} {xw:>5}  {xl:>5}  {xr:>5}  ({pa:>3} PA)"
+        return f"   {num} {name:<24} {xw:>5}  {xl:>5}  {xr:>5}  ({pa:>3} PA)"
 
     if opp_starter:
         s = opp_starter_stats.get(opp_starter["mlbam_id"])
+        num = fmt_num(opp_starter)
         if s:
             throws = s["throws"]
             xw = format_xwoba(s["xwoba"])
             xl = format_xwoba(s["xwoba_L"]) if s["xwoba_L"] is not None else " -- "
             xr = format_xwoba(s["xwoba_R"]) if s["xwoba_R"] is not None else " -- "
             pa = s["pa"]
-            lines.append(f"  Opposing SP: {opp_starter['name']} ({throws}HP)")
+            lines.append(f"  Opposing SP: {num} {opp_starter['name']} ({throws}HP)")
             lines.append(f"  xwOBA against: {xw}   vL: {xl}   vR: {xr}   ({pa} PA)")
         else:
-            lines.append(f"  Opposing SP: {opp_starter['name']} (no Statcast data)")
+            lines.append(f"  Opposing SP: {num} {opp_starter['name']} (no Statcast data)")
         lines.append("  " + "-" * (W - 4))
 
-    hdr = f"  {'#':>2}   {'Player':<24} {'Pos':<4} {'xwOBA':>5}  {'vL':>6}  {'vR':>6}"
+    hdr = f"  {'#':>2}  {'Uni':>3} {'Player':<21} {'Pos':<4} {'xwOBA':>5}  {'vL':>5}  {'vR':>5}"
     lines.append(hdr)
     lines.append("  " + "-" * (W - 4))
 
     def player_line(prefix, p):
         s = batter_splits.get(p["mlbam_id"], {})
+        num = fmt_num(p)
         xw = format_xwoba(s["xwoba"]) if "xwoba" in s else " -- "
         xl = format_xwoba(s["xwoba_L"]) if s.get("xwoba_L") is not None else " -- "
         xr = format_xwoba(s["xwoba_R"]) if s.get("xwoba_R") is not None else " -- "
-        return f"  {prefix} {p['name']:<24} {p['position']:<4} {xw:>5}  {xl:>5}  {xr:>5}"
+        return f"  {prefix} {num} {p['name']:<21} {p['position']:<4} {xw:>5}  {xl:>5}  {xr:>5}"
 
     for i, p in enumerate(starters, 1):
         lines.append(player_line(f"{i:>2}.", p))

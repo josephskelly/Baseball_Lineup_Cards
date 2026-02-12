@@ -2,46 +2,46 @@
                   WSH Batting Lineup — 2024-07-01                 
             Home: New York Mets @ Washington Nationals            
 ==================================================================
-  Opposing SP: David Peterson (LHP)
+  Opposing SP: #23 David Peterson (LHP)
   xwOBA against: .376   vL: .351   vR: .384   (146 PA)
   --------------------------------------------------------------
-   #   Player                   Pos  xwOBA      vL      vR
+   #  Uni Player                Pos  xwOBA     vL     vR
   --------------------------------------------------------------
-   1. CJ Abrams                SS    .363   .356   .366
-   2. Lane Thomas              RF    .332   .412   .299
-   3. Harold Ramírez           DH    .255   .243   .261
-   4. Joey Meneses             1B    .286   .280   .288
-   5. Ildemaro Vargas          3B    .280   .310   .259
-   6. James Wood               LF    .338   .338    -- 
-   7. Keibert Ruiz             C     .291   .267   .299
-   8. Nick Senzel              3B    .320   .371   .302
-   9. Jacob Young              CF    .305   .351   .284
-  10. Luis García Jr.          2B    .326   .246   .345
-  11. Jesse Winker             DH    .333   .322   .337
+   1. # 5 CJ Abrams             SS    .363   .356   .366
+   2. #28 Lane Thomas           RF    .332   .412   .299
+   3. #43 Harold Ramírez        DH    .255   .243   .261
+   4. #45 Joey Meneses          1B    .286   .280   .288
+   5. #14 Ildemaro Vargas       3B    .280   .310   .259
+   6. #50 James Wood            LF    .338   .338    -- 
+   7. #20 Keibert Ruiz          C     .291   .267   .299
+   8. #13 Nick Senzel           3B    .320   .371   .302
+   9. #30 Jacob Young           CF    .305   .351   .284
+  10. # 2 Luis García Jr.       2B    .326   .246   .345
+  11. # 6 Jesse Winker          DH    .333   .322   .337
 
   Bench
   --------------------------------------------------------------
-      Drew Millas              PR    .251   .155   .294
-      Nasim Nuñez              SS    .146   .111   .195
+      #81 Drew Millas           PR    .251   .155   .294
+      #26 Nasim Nuñez           SS    .146   .111   .195
 
   Starting Pitcher             xwOBA     vL     vR
   --------------------------------------------------------------
-      MacKenzie Gore (LHP)      .305   .315   .302  (392 PA)
+   # 1 MacKenzie Gore (LHP)      .305   .315   .302  (392 PA)
 
   Bullpen                      xwOBA     vL     vR
   --------------------------------------------------------------
-      DJ Herz (LHP)             .319   .385   .303  ( 98 PA)
-      Derek Law (RHP)           .307   .265   .333  (207 PA)
-      Dylan Floro (RHP)         .278   .284   .275  (156 PA)
-      Hunter Harvey (RHP)       .336   .303   .369  (168 PA)
-      Jacob Barnes (RHP)        .351   .378   .336  (120 PA)
-      Jake Irvin (RHP)          .306   .356   .247  (385 PA)
-      Jordan Weems (RHP)        .329   .354   .311  (141 PA)
-      Kyle Finnegan (RHP)       .315   .288   .339  (134 PA)
-      Mitchell Parker (LHP)     .316   .251   .337  (318 PA)
-      Patrick Corbin (LHP)      .388   .376   .392  (410 PA)
-      Robert Garcia (LHP)       .257   .273   .243  (111 PA)
-      Tanner Rainey (RHP)       .399   .471   .349  (112 PA)
+   #74 DJ Herz (LHP)             .319   .385   .303  ( 98 PA)
+   #58 Derek Law (RHP)           .307   .265   .333  (207 PA)
+   #44 Dylan Floro (RHP)         .278   .284   .275  (156 PA)
+   #73 Hunter Harvey (RHP)       .336   .303   .369  (168 PA)
+   #59 Jacob Barnes (RHP)        .351   .378   .336  (120 PA)
+   #27 Jake Irvin (RHP)          .306   .356   .247  (385 PA)
+   #51 Jordan Weems (RHP)        .329   .354   .311  (141 PA)
+   #67 Kyle Finnegan (RHP)       .315   .288   .339  (134 PA)
+   #70 Mitchell Parker (LHP)     .316   .251   .337  (318 PA)
+   #46 Patrick Corbin (LHP)      .388   .376   .392  (410 PA)
+   #61 Robert Garcia (LHP)       .257   .273   .243  (111 PA)
+   #21 Tanner Rainey (RHP)       .399   .471   .349  (112 PA)
 
   Total eligible batters: 13
 ==================================================================
