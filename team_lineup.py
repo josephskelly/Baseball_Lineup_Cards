@@ -1,7 +1,9 @@
-"""Pull all eligible batters for a specific team on a specific date.
+"""Pull all eligible batters for both teams in a game on a specific date.
 
 Uses the MLB Stats API boxscore to get the full roster (including bench players
 who never batted), and Statcast data to reconstruct the batting order.
+Produces one lineup card per team, each showing that team's batters and the
+opposing pitching staff they'll face.
 """
 
 import argparse
@@ -20,6 +22,9 @@ TEAM_IDS = {
     "STL": 138, "TB": 139, "TEX": 140, "TOR": 141, "WSH": 120,
 }
 
+# Reverse lookup: team ID -> abbreviation
+TEAM_ABBREVS = {v: k for k, v in TEAM_IDS.items()}
+
 
 def get_game_pk(team, date):
     """Find the game_pk for a team on a given date via MLB Stats API."""
@@ -37,46 +42,47 @@ def get_game_pk(team, date):
     return dates[0]["games"][0]["gamePk"]
 
 
-def get_all_position_players(game_pk, team):
-    """Get all position players from the boxscore for the given team."""
+def fetch_game_data(game_pk, date):
+    """Fetch shared game data: live feed and Statcast pitch-level data.
+
+    Returns (live_feed, statcast_day) — both are fetched once and shared
+    across both teams' lineup cards.
+    """
     resp = requests.get(f"https://statsapi.mlb.com/api/v1.1/game/{game_pk}/feed/live")
     resp.raise_for_status()
-    game_data = resp.json()
+    live_feed = resp.json()
 
-    teams = game_data["gameData"]["teams"]
-    team_id = TEAM_IDS[team]
-    side = "away" if teams["away"]["id"] == team_id else "home"
+    print("Fetching Statcast data for game day...")
+    statcast_day = statcast(start_dt=date, end_dt=date)
 
-    players = game_data["liveData"]["boxscore"]["teams"][side]["players"]
+    return live_feed, statcast_day
+
+
+def extract_position_players(live_feed, side):
+    """Get all position players from the pre-fetched live feed."""
+    players = live_feed["liveData"]["boxscore"]["teams"][side]["players"]
     position_players = []
     for pid, pdata in players.items():
         pos = pdata["position"]["abbreviation"]
         if pos == "P":
             continue
-        mlbam_id = pdata["person"]["id"]
-        name = pdata["person"]["fullName"]
-        batting = pdata.get("stats", {}).get("batting", {})
-        pa = batting.get("plateAppearances", 0)
         position_players.append({
-            "mlbam_id": mlbam_id, "name": name, "position": pos, "pa": pa,
+            "mlbam_id": pdata["person"]["id"],
+            "name": pdata["person"]["fullName"],
+            "position": pos,
+            "pa": pdata.get("stats", {}).get("batting", {}).get("plateAppearances", 0),
         })
-    return position_players, side
+    return position_players
 
 
-def get_opposing_pitchers(game_pk, side):
-    """Get the opposing team's starter and all bullpen arms from the boxscore.
+def extract_pitchers(live_feed, side):
+    """Get starter and bullpen pitchers from the pre-fetched live feed.
 
     Returns (starter, bullpen) where starter is a dict and bullpen is a list.
     All rostered pitchers except the starter are considered bullpen.
     """
-    opp_side = "home" if side == "away" else "away"
-
-    resp = requests.get(f"https://statsapi.mlb.com/api/v1.1/game/{game_pk}/feed/live")
-    resp.raise_for_status()
-    game_data = resp.json()
-
-    players = game_data["liveData"]["boxscore"]["teams"][opp_side]["players"]
-    pitchers_list = game_data["liveData"]["boxscore"]["teams"][opp_side].get("pitchers", [])
+    players = live_feed["liveData"]["boxscore"]["teams"][side]["players"]
+    pitchers_list = live_feed["liveData"]["boxscore"]["teams"][side].get("pitchers", [])
     if not pitchers_list:
         return None, []
 
@@ -102,10 +108,9 @@ def get_opposing_pitchers(game_pk, side):
     return starter, bullpen
 
 
-def get_batting_order(game_pk, side, date):
-    """Get batting order from Statcast data for starters and in-game subs."""
-    data = statcast(start_dt=date, end_dt=date)
-    game = data[data["game_pk"] == game_pk]
+def extract_batting_order(statcast_day, game_pk, side):
+    """Get batting order from pre-fetched Statcast data for starters and subs."""
+    game = statcast_day[statcast_day["game_pk"] == game_pk]
     half = "Bot" if side == "home" else "Top"
     team_batting = game[game["inning_topbot"] == half]
 
@@ -216,45 +221,18 @@ def format_xwoba(val):
     return f".{val * 1000:03.0f}"
 
 
+def build_lineup_card(team_abbrev, date, side, away_name, home_name,
+                      position_players, batting_order, batter_splits,
+                      opp_starter, opp_bullpen, pitcher_stats):
+    """Format a single team's lineup card as a string.
 
-def get_team_lineup(team, date):
-    """Fetch lineup data, compute xwOBA splits, and return formatted output string."""
-    print(f"Fetching {team} eligible batters for {date}...")
-
-    game_pk = get_game_pk(team, date)
-    if not game_pk:
-        print(f"No game found for {team} on {date}")
-        return None
-
-    position_players, side = get_all_position_players(game_pk, team)
-    batting_order = get_batting_order(game_pk, side, date)
-
-    # Get game info for display
-    resp = requests.get("https://statsapi.mlb.com/api/v1/schedule", params={
-        "gamePk": game_pk, "sportId": 1,
-    })
-    game_info = resp.json()["dates"][0]["games"][0]
-    away_name = game_info["teams"]["away"]["team"]["name"]
-    home_name = game_info["teams"]["home"]["team"]["name"]
+    This is a pure formatting function — all data has already been fetched
+    and computed. It assembles the batting lineup, opposing starter, and
+    bullpen into a fixed-width text card.
+    """
     is_home = side == "home"
 
-    # Fetch opposing pitchers (starter + bullpen) and their xwOBA against
-    opp_starter, opp_bullpen = get_opposing_pitchers(game_pk, side)
-    pitcher_stats = {}
-    all_opp_pitchers = ([opp_starter] if opp_starter else []) + opp_bullpen
-    if all_opp_pitchers:
-        print(f"Fetching xwOBA against for {len(all_opp_pitchers)} opposing pitchers...")
-        for p in all_opp_pitchers:
-            stats = get_pitcher_xwoba(p["mlbam_id"], date)
-            if stats:
-                pitcher_stats[p["mlbam_id"]] = stats
-
-    # Fetch season xwOBA splits for all position players
-    batter_ids = [p["mlbam_id"] for p in position_players]
-    print(f"Fetching xwOBA splits for {len(batter_ids)} batters...")
-    splits = get_xwoba_splits(batter_ids, date)
-
-    # Split into starters (had PAs, in batting order) and bench
+    # Split into starters (in batting order) and bench
     starters = []
     bench = []
     for p in position_players:
@@ -274,7 +252,7 @@ def get_team_lineup(team, date):
     W = 66
     lines = []
     lines.append("=" * W)
-    lines.append(f"  {team} Batting Lineup — {date}".center(W))
+    lines.append(f"  {team_abbrev} Batting Lineup — {date}".center(W))
     matchup = f"{'Home' if is_home else 'Away'}: {away_name} @ {home_name}"
     lines.append(matchup.center(W))
     lines.append("=" * W)
@@ -311,7 +289,7 @@ def get_team_lineup(team, date):
     lines.append("  " + "-" * (W - 4))
 
     def player_line(prefix, p):
-        s = splits.get(p["mlbam_id"], {})
+        s = batter_splits.get(p["mlbam_id"], {})
         xw = format_xwoba(s["xwoba"]) if "xwoba" in s else " -- "
         xl = format_xwoba(s["xwoba_L"]) if s.get("xwoba_L") is not None else " -- "
         xr = format_xwoba(s["xwoba_R"]) if s.get("xwoba_R") is not None else " -- "
@@ -338,9 +316,70 @@ def get_team_lineup(team, date):
     lines.append(f"  Total eligible batters: {len(position_players)}")
     lines.append("=" * W)
 
-    output = "\n".join(lines)
-    print(output)
-    return output
+    return "\n".join(lines)
+
+
+def get_game_lineups(team, date):
+    """Fetch game data and produce lineup cards for both teams.
+
+    Returns a dict mapping team abbreviation to its formatted lineup card,
+    e.g. {"NYM": "...", "WSH": "..."}.
+    """
+    print(f"Finding game for {team} on {date}...")
+
+    game_pk = get_game_pk(team, date)
+    if not game_pk:
+        print(f"No game found for {team} on {date}")
+        return None
+
+    live_feed, statcast_day = fetch_game_data(game_pk, date)
+
+    # Identify both teams
+    teams = live_feed["gameData"]["teams"]
+    away_id = teams["away"]["id"]
+    home_id = teams["home"]["id"]
+    away_abbrev = TEAM_ABBREVS.get(away_id, "???")
+    home_abbrev = TEAM_ABBREVS.get(home_id, "???")
+    away_name = teams["away"]["name"]
+    home_name = teams["home"]["name"]
+
+    results = {}
+    for side, abbrev in [("away", away_abbrev), ("home", home_abbrev)]:
+        opp_side = "home" if side == "away" else "away"
+
+        # Extract batters and batting order for this team
+        position_players = extract_position_players(live_feed, side)
+        batting_order = extract_batting_order(statcast_day, game_pk, side)
+
+        # Extract opposing pitchers (starter + bullpen)
+        opp_starter, opp_bullpen = extract_pitchers(live_feed, opp_side)
+
+        # Fetch xwOBA for all opposing pitchers
+        all_opp_pitchers = ([opp_starter] if opp_starter else []) + opp_bullpen
+        pitcher_stats = {}
+        if all_opp_pitchers:
+            print(f"Fetching xwOBA against for {len(all_opp_pitchers)} "
+                  f"pitchers facing {abbrev}...")
+            for p in all_opp_pitchers:
+                stats = get_pitcher_xwoba(p["mlbam_id"], date)
+                if stats:
+                    pitcher_stats[p["mlbam_id"]] = stats
+
+        # Fetch xwOBA splits for all batters
+        batter_ids = [p["mlbam_id"] for p in position_players]
+        print(f"Fetching xwOBA splits for {len(batter_ids)} {abbrev} batters...")
+        batter_splits = get_xwoba_splits(batter_ids, date)
+
+        card = build_lineup_card(
+            abbrev, date, side, away_name, home_name,
+            position_players, batting_order, batter_splits,
+            opp_starter, opp_bullpen, pitcher_stats,
+        )
+        results[abbrev] = card
+        print(card)
+        print()
+
+    return results
 
 
 if __name__ == "__main__":
@@ -358,25 +397,28 @@ if __name__ == "__main__":
     parser.add_argument(
         "-o", "--output",
         nargs="?", const="auto", default=None,
-        help="Save to .txt file. Omit value for auto-named file, or pass a path.",
+        help="Save to .txt files. Omit value for auto-named files, or pass a path prefix.",
     )
 
     args = parser.parse_args()
 
     try:
-        result = get_team_lineup(args.team, args.date)
-        if result is None:
+        results = get_game_lineups(args.team, args.date)
+        if results is None:
             sys.exit(1)
 
         if args.output is not None:
-            filename = (f"{args.team}_{args.date}_lineup.txt"
-                        if args.output == "auto" else args.output)
-            # "with open(...) as f" is a context manager — it auto-closes the file
-            # when the block exits, like Swift's defer { file.close() } but built
-            # into the language syntax.
-            with open(filename, "w") as f:
-                f.write(result + "\n")
-            print(f"\nSaved to {filename}")
+            for abbrev, card in results.items():
+                if args.output == "auto":
+                    filename = f"{abbrev}_{args.date}_lineup.txt"
+                else:
+                    filename = f"{args.output}_{abbrev}.txt"
+                # "with open(...) as f" is a context manager — it auto-closes the file
+                # when the block exits, like Swift's defer { file.close() } but built
+                # into the language syntax.
+                with open(filename, "w") as f:
+                    f.write(card + "\n")
+                print(f"Saved to {filename}")
 
     except Exception as e:
         print(f"\nError: {e}")

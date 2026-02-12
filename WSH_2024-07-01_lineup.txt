@@ -1,0 +1,42 @@
+==================================================================
+                  WSH Batting Lineup — 2024-07-01                 
+            Home: New York Mets @ Washington Nationals            
+==================================================================
+  Opposing SP: David Peterson (LHP)
+  xwOBA against: .376   vL: .351   vR: .384   (146 PA)
+  --------------------------------------------------------------
+   #   Player                   Pos  xwOBA      vL      vR
+  --------------------------------------------------------------
+   1. CJ Abrams                SS    .363   .356   .366
+   2. Lane Thomas              RF    .332   .412   .299
+   3. Harold Ramírez           DH    .255   .243   .261
+   4. Joey Meneses             1B    .286   .280   .288
+   5. Ildemaro Vargas          3B    .280   .310   .259
+   6. James Wood               LF    .338   .338    -- 
+   7. Keibert Ruiz             C     .291   .267   .299
+   8. Nick Senzel              3B    .320   .371   .302
+   9. Jacob Young              CF    .305   .351   .284
+  10. Luis García Jr.          2B    .326   .246   .345
+  11. Jesse Winker             DH    .333   .322   .337
+
+  Bench
+  --------------------------------------------------------------
+      Drew Millas              PR    .251   .155   .294
+      Nasim Nuñez              SS    .146   .111   .195
+
+  Bullpen                      xwOBA     vL     vR
+  --------------------------------------------------------------
+      Adam Ottavino (RHP)       .277   .357   .222  (140 PA)
+      Adrian Houser (RHP)       .346   .371   .319  (268 PA)
+      Dedniel Núñez (RHP)       .248   .338   .212  ( 95 PA)
+      Jake Diekman (LHP)        .305   .275   .331  (112 PA)
+      Jose Quintana (LHP)       .361   .334   .368  (358 PA)
+      Luis Severino (RHP)       .300   .308   .293  (399 PA)
+      Matt Festa (RHP)          .632   .594   .647  (  7 PA)
+      Reed Garrett (RHP)        .272   .285   .262  (168 PA)
+      Sean Manaea (LHP)         .332   .370   .323  (322 PA)
+      Ty Adcock (RHP)           .232   .401   .147  (  6 PA)
+      Tyler Jay (LHP)           .316   .279   .331  ( 24 PA)
+
+  Total eligible batters: 13
+==================================================================
