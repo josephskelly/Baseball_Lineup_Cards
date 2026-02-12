@@ -223,12 +223,15 @@ def format_xwoba(val):
 
 def build_lineup_card(team_abbrev, date, side, away_name, home_name,
                       position_players, batting_order, batter_splits,
-                      opp_starter, opp_bullpen, pitcher_stats):
+                      opp_starter, opp_starter_stats,
+                      own_bullpen, own_pitcher_stats):
     """Format a single team's lineup card as a string.
 
     This is a pure formatting function — all data has already been fetched
-    and computed. It assembles the batting lineup, opposing starter, and
-    bullpen into a fixed-width text card.
+    and computed. Each card shows:
+    - The opposing starting pitcher at the top (for matchup context)
+    - The team's batting lineup and bench
+    - The team's own bullpen
     """
     is_home = side == "home"
 
@@ -257,9 +260,9 @@ def build_lineup_card(team_abbrev, date, side, away_name, home_name,
     lines.append(matchup.center(W))
     lines.append("=" * W)
 
-    # Opposing pitcher section
-    def pitcher_line(p):
-        s = pitcher_stats.get(p["mlbam_id"])
+    # Opposing starter at the top
+    def pitcher_line(p, stats):
+        s = stats.get(p["mlbam_id"])
         if not s:
             return f"      {p['name']:<24}       (no Statcast data)"
         throws = s["throws"]
@@ -271,7 +274,7 @@ def build_lineup_card(team_abbrev, date, side, away_name, home_name,
         return f"      {name:<24} {xw:>5}  {xl:>5}  {xr:>5}  ({pa:>3} PA)"
 
     if opp_starter:
-        s = pitcher_stats.get(opp_starter["mlbam_id"])
+        s = opp_starter_stats.get(opp_starter["mlbam_id"])
         if s:
             throws = s["throws"]
             xw = format_xwoba(s["xwoba"])
@@ -305,12 +308,12 @@ def build_lineup_card(team_abbrev, date, side, away_name, home_name,
         for p in bench:
             lines.append(player_line("   ", p))
 
-    if opp_bullpen:
+    if own_bullpen:
         lines.append("")
         lines.append("  Bullpen" + " " * 22 + "xwOBA     vL     vR")
         lines.append("  " + "-" * (W - 4))
-        for p in opp_bullpen:
-            lines.append(pitcher_line(p))
+        for p in own_bullpen:
+            lines.append(pitcher_line(p, own_pitcher_stats))
 
     lines.append("")
     lines.append(f"  Total eligible batters: {len(position_players)}")
@@ -351,19 +354,24 @@ def get_game_lineups(team, date):
         position_players = extract_position_players(live_feed, side)
         batting_order = extract_batting_order(statcast_day, game_pk, side)
 
-        # Extract opposing pitchers (starter + bullpen)
-        opp_starter, opp_bullpen = extract_pitchers(live_feed, opp_side)
+        # Extract opposing starter (shown at top for matchup context)
+        opp_starter, _ = extract_pitchers(live_feed, opp_side)
+        opp_starter_stats = {}
+        if opp_starter:
+            print(f"Fetching xwOBA against for opposing SP {opp_starter['name']}...")
+            stats = get_pitcher_xwoba(opp_starter["mlbam_id"], date)
+            if stats:
+                opp_starter_stats[opp_starter["mlbam_id"]] = stats
 
-        # Fetch xwOBA for all opposing pitchers
-        all_opp_pitchers = ([opp_starter] if opp_starter else []) + opp_bullpen
-        pitcher_stats = {}
-        if all_opp_pitchers:
-            print(f"Fetching xwOBA against for {len(all_opp_pitchers)} "
-                  f"pitchers facing {abbrev}...")
-            for p in all_opp_pitchers:
+        # Extract this team's own bullpen
+        own_starter, own_bullpen = extract_pitchers(live_feed, side)
+        own_pitcher_stats = {}
+        if own_bullpen:
+            print(f"Fetching xwOBA against for {len(own_bullpen)} {abbrev} relievers...")
+            for p in own_bullpen:
                 stats = get_pitcher_xwoba(p["mlbam_id"], date)
                 if stats:
-                    pitcher_stats[p["mlbam_id"]] = stats
+                    own_pitcher_stats[p["mlbam_id"]] = stats
 
         # Fetch xwOBA splits for all batters
         batter_ids = [p["mlbam_id"] for p in position_players]
@@ -373,7 +381,8 @@ def get_game_lineups(team, date):
         card = build_lineup_card(
             abbrev, date, side, away_name, home_name,
             position_players, batting_order, batter_splits,
-            opp_starter, opp_bullpen, pitcher_stats,
+            opp_starter, opp_starter_stats,
+            own_bullpen, own_pitcher_stats,
         )
         results[abbrev] = card
         print(card)

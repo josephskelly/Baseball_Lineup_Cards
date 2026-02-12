@@ -26,17 +26,18 @@
 
   Bullpen                      xwOBA     vL     vR
   --------------------------------------------------------------
-      Adam Ottavino (RHP)       .277   .357   .222  (140 PA)
-      Adrian Houser (RHP)       .346   .371   .319  (268 PA)
-      Dedniel Núñez (RHP)       .248   .338   .212  ( 95 PA)
-      Jake Diekman (LHP)        .305   .275   .331  (112 PA)
-      Jose Quintana (LHP)       .361   .334   .368  (358 PA)
-      Luis Severino (RHP)       .300   .308   .293  (399 PA)
-      Matt Festa (RHP)          .632   .594   .647  (  7 PA)
-      Reed Garrett (RHP)        .272   .285   .262  (168 PA)
-      Sean Manaea (LHP)         .332   .370   .323  (322 PA)
-      Ty Adcock (RHP)           .232   .401   .147  (  6 PA)
-      Tyler Jay (LHP)           .316   .279   .331  ( 24 PA)
+      DJ Herz (LHP)             .319   .385   .303  ( 98 PA)
+      Derek Law (RHP)           .307   .265   .333  (207 PA)
+      Dylan Floro (RHP)         .278   .284   .275  (156 PA)
+      Hunter Harvey (RHP)       .336   .303   .369  (168 PA)
+      Jacob Barnes (RHP)        .351   .378   .336  (120 PA)
+      Jake Irvin (RHP)          .306   .356   .247  (385 PA)
+      Jordan Weems (RHP)        .329   .354   .311  (141 PA)
+      Kyle Finnegan (RHP)       .315   .288   .339  (134 PA)
+      Mitchell Parker (LHP)     .316   .251   .337  (318 PA)
+      Patrick Corbin (LHP)      .388   .376   .392  (410 PA)
+      Robert Garcia (LHP)       .257   .273   .243  (111 PA)
+      Tanner Rainey (RHP)       .399   .471   .349  (112 PA)
 
   Total eligible batters: 13
 ==================================================================
