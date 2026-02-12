@@ -2,24 +2,45 @@
                   NYM Batting Lineup — 2024-07-01                 
             Away: New York Mets @ Washington Nationals            
 ==================================================================
-   #   Player                   Pos  xwOBA      vL      vR
+  Opposing SP: # 1 MacKenzie Gore (LHP)
+  xwOBA against: .305   vL: .315   vR: .302   (392 PA)
   --------------------------------------------------------------
-   1. Francisco Lindor         SS    .354  +0.060  -0.020
-   2. Harrison Bader           CF    .323  +0.019  -0.010
-   3. J.D. Martinez            DH    .392  +0.127  -0.054
-   4. Pete Alonso              1B    .345  -0.007  +0.003
-   5. Mark Vientos             3B    .367  -0.005  +0.004
-   6. Tyrone Taylor            RF    .312  -0.058  +0.031
-   7. Francisco Alvarez        C     .314  -0.013  +0.006
-   8. Jose Iglesias            3B    .336  +0.033  -0.049
-   9. Jeff McNeil              2B    .277  +0.001  -0.000
-  10. Ben Gamel                LF    .517    --    +0.000
+   #  Uni Player                Pos  xwOBA     vL     vR
+  --------------------------------------------------------------
+   1. #12 Francisco Lindor      SS    .354   .414   .334
+   2. #44 Harrison Bader        CF    .323   .342   .313
+   3. #28 J.D. Martinez         DH    .392   .518   .338
+   4. #20 Pete Alonso           1B    .345   .338   .347
+   5. #27 Mark Vientos          3B    .367   .361   .370
+   6. #15 Tyrone Taylor         RF    .312   .254   .343
+   7. # 4 Francisco Alvarez     C     .314   .301   .320
+   8. #11 Jose Iglesias         3B    .336   .370   .288
+   9. # 1 Jeff McNeil           2B    .277   .278   .277
+  10. #21 Ben Gamel             LF    .517    --    .517
 
   Bench
   --------------------------------------------------------------
-      Brandon Nimmo            LF    .378  -0.022  +0.008
-      DJ Stewart               RF    .341  -0.103  +0.009
-      Luis Torrens             C     .432  -0.069  +0.042
+      # 9 Brandon Nimmo         LF    .378   .356   .386
+      #29 DJ Stewart            RF    .341   .238   .350
+      #13 Luis Torrens          C     .432   .362   .473
+
+  Starting Pitcher             xwOBA     vL     vR
+  --------------------------------------------------------------
+   #23 David Peterson (LHP)      .376   .351   .384  (146 PA)
+
+  Bullpen                      xwOBA     vL     vR
+  --------------------------------------------------------------
+   # 0 Adam Ottavino (RHP)       .277   .357   .222  (140 PA)
+   #35 Adrian Houser (RHP)       .346   .371   .319  (268 PA)
+   #72 Dedniel Núñez (RHP)       .248   .338   .212  ( 95 PA)
+   #30 Jake Diekman (LHP)        .305   .275   .331  (112 PA)
+   #62 Jose Quintana (LHP)       .361   .334   .368  (358 PA)
+   #40 Luis Severino (RHP)       .300   .308   .293  (399 PA)
+   #73 Matt Festa (RHP)          .632   .594   .647  (  7 PA)
+   #75 Reed Garrett (RHP)        .272   .285   .262  (168 PA)
+   #59 Sean Manaea (LHP)         .332   .370   .323  (322 PA)
+   #52 Ty Adcock (RHP)           .232   .401   .147  (  6 PA)
+   #74 Tyler Jay (LHP)           .316   .279   .331  ( 24 PA)
 
   Total eligible batters: 13
 ==================================================================
