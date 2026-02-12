@@ -2,6 +2,9 @@
                   NYM Batting Lineup — 2024-07-01                 
             Away: New York Mets @ Washington Nationals            
 ==================================================================
+  Opposing SP: MacKenzie Gore (LHP)
+  xwOBA against: .305   vL: +0.011   vR: -0.003   (392 PA)
+  --------------------------------------------------------------
    #   Player                   Pos  xwOBA      vL      vR
   --------------------------------------------------------------
    1. Francisco Lindor         SS    .354  +0.060  -0.020

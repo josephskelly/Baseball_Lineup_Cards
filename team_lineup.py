@@ -8,7 +8,7 @@ import argparse
 import math
 import sys
 import requests
-from pybaseball import statcast, statcast_batter
+from pybaseball import statcast, statcast_batter, statcast_pitcher
 
 # Statcast abbreviation -> MLB Stats API team ID
 TEAM_IDS = {
@@ -61,6 +61,32 @@ def get_all_position_players(game_pk, team):
             "mlbam_id": mlbam_id, "name": name, "position": pos, "pa": pa,
         })
     return position_players, side
+
+
+def get_opposing_pitcher(game_pk, side):
+    """Get the opposing team's starting pitcher from the boxscore."""
+    opp_side = "home" if side == "away" else "away"
+
+    resp = requests.get(f"https://statsapi.mlb.com/api/v1.1/game/{game_pk}/feed/live")
+    resp.raise_for_status()
+    game_data = resp.json()
+
+    players = game_data["liveData"]["boxscore"]["teams"][opp_side]["players"]
+    pitchers_list = game_data["liveData"]["boxscore"]["teams"][opp_side].get("pitchers", [])
+    if not pitchers_list:
+        return None
+
+    # The first pitcher in the pitchers list is the starter
+    starter_id = pitchers_list[0]
+    pdata = players.get(f"ID{starter_id}")
+    if not pdata:
+        return None
+
+    return {
+        "mlbam_id": starter_id,
+        "name": pdata["person"]["fullName"],
+        "throws": pdata.get("position", {}).get("abbreviation", "P"),
+    }
 
 
 def get_batting_order(game_pk, side, date):
@@ -125,6 +151,53 @@ def get_xwoba_splits(batter_ids, date):
     return splits
 
 
+def get_pitcher_xwoba(pitcher_id, date):
+    """Calculate season xwOBA against and L/R batter splits for a pitcher.
+
+    Same computation as get_xwoba_splits but from the pitcher's perspective:
+    - xwOBA against = expected wOBA allowed to all batters
+    - vL/vR = differential vs left-handed / right-handed batters (by stand)
+    """
+    year = date[:4]
+    season_start = f"{year}-03-20"
+
+    try:
+        data = statcast_pitcher(season_start, date, pitcher_id)
+    except Exception:
+        return None
+
+    pa_events = data[data["woba_denom"] == 1].copy()
+    if pa_events.empty:
+        return None
+
+    pa_events["xwoba"] = pa_events["estimated_woba_using_speedangle"].fillna(
+        pa_events["woba_value"]
+    )
+
+    overall = pa_events["xwoba"].mean()
+    pa_count = len(pa_events)
+
+    # "stand" is the batter's handedness (L/R), used for pitcher splits
+    vs_l = pa_events[pa_events["stand"] == "L"]["xwoba"]
+    vs_r = pa_events[pa_events["stand"] == "R"]["xwoba"]
+
+    vs_l_mean = vs_l.mean() if not vs_l.empty else float("nan")
+    vs_r_mean = vs_r.mean() if not vs_r.empty else float("nan")
+
+    # Determine pitcher's throwing hand from the data
+    throws = "R"
+    if "p_throws" in data.columns and not data["p_throws"].empty:
+        throws = data["p_throws"].iloc[0]
+
+    return {
+        "xwoba": overall,
+        "diff_L": vs_l_mean - overall if not math.isnan(vs_l_mean) else None,
+        "diff_R": vs_r_mean - overall if not math.isnan(vs_r_mean) else None,
+        "pa": pa_count,
+        "throws": throws,
+    }
+
+
 def format_xwoba(val):
     """Format xwOBA in baseball convention (no leading zero): .345"""
     return f".{val * 1000:03.0f}"
@@ -158,6 +231,13 @@ def get_team_lineup(team, date):
     home_name = game_info["teams"]["home"]["team"]["name"]
     is_home = side == "home"
 
+    # Fetch opposing starter pitcher info and xwOBA against
+    opp_pitcher = get_opposing_pitcher(game_pk, side)
+    pitcher_stats = None
+    if opp_pitcher:
+        print(f"Fetching xwOBA against for {opp_pitcher['name']}...")
+        pitcher_stats = get_pitcher_xwoba(opp_pitcher["mlbam_id"], date)
+
     # Fetch season xwOBA splits for all position players
     batter_ids = [p["mlbam_id"] for p in position_players]
     print(f"Fetching xwOBA splits for {len(batter_ids)} batters...")
@@ -187,6 +267,20 @@ def get_team_lineup(team, date):
     matchup = f"{'Home' if is_home else 'Away'}: {away_name} @ {home_name}"
     lines.append(matchup.center(W))
     lines.append("=" * W)
+
+    # Opposing pitcher section
+    if opp_pitcher and pitcher_stats:
+        throws = pitcher_stats["throws"]
+        xw = format_xwoba(pitcher_stats["xwoba"])
+        dl = format_diff(pitcher_stats["diff_L"])
+        dr = format_diff(pitcher_stats["diff_R"])
+        pa = pitcher_stats["pa"]
+        lines.append(f"  Opposing SP: {opp_pitcher['name']} ({throws}HP)")
+        lines.append(f"  xwOBA against: {xw}   vL: {dl}   vR: {dr}   ({pa} PA)")
+        lines.append("  " + "-" * (W - 4))
+    elif opp_pitcher:
+        lines.append(f"  Opposing SP: {opp_pitcher['name']} (no Statcast data)")
+        lines.append("  " + "-" * (W - 4))
 
     hdr = f"  {'#':>2}   {'Player':<24} {'Pos':<4} {'xwOBA':>5}  {'vL':>6}  {'vR':>6}"
     lines.append(hdr)
