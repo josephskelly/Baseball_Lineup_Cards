@@ -91,11 +91,9 @@ def extract_pitchers(live_feed, side):
     """
     players = live_feed["liveData"]["boxscore"]["teams"][side]["players"]
     pitchers_list = live_feed["liveData"]["boxscore"]["teams"][side].get("pitchers", [])
-    if not pitchers_list:
-        return None, []
 
-    # The first pitcher in the pitchers list is the starter
-    starter_id = pitchers_list[0]
+    # First pitcher in the list (if any) is the starter
+    starter_id = pitchers_list[0] if pitchers_list else None
 
     # Collect all rostered pitchers (position == "P")
     starter = None
@@ -108,7 +106,7 @@ def extract_pitchers(live_feed, side):
             "name": pdata["person"]["fullName"],
             "number": pdata.get("jerseyNumber", ""),
         }
-        if pdata["person"]["id"] == starter_id:
+        if starter_id is not None and pdata["person"]["id"] == starter_id:
             starter = info
         else:
             bullpen.append(info)
