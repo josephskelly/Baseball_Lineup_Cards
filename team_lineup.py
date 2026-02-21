@@ -54,7 +54,13 @@ def fetch_game_data(game_pk, date):
     live_feed = resp.json()
 
     print("Fetching Statcast data for game day...")
-    statcast_day = statcast(start_dt=date, end_dt=date)
+    try:
+        statcast_day = statcast(start_dt=date, end_dt=date)
+    except Exception:
+        statcast_day = None
+
+    if statcast_day is not None and statcast_day.empty:
+        statcast_day = None
 
     return live_feed, statcast_day
 
@@ -112,7 +118,13 @@ def extract_pitchers(live_feed, side):
 
 
 def extract_batting_order(statcast_day, game_pk, side):
-    """Get batting order from pre-fetched Statcast data for starters and subs."""
+    """Get batting order from pre-fetched Statcast data for starters and subs.
+
+    Returns an empty dict when Statcast data is unavailable (e.g. spring training).
+    """
+    if statcast_day is None:
+        return {}
+
     game = statcast_day[statcast_day["game_pk"] == game_pk]
     half = "Bot" if side == "home" else "Top"
     team_batting = game[game["inning_topbot"] == half]
@@ -345,14 +357,19 @@ def build_lineup_card(team_abbrev, date, side, away_name, home_name,
         fb = fmt_pct(s.get("fb_pct"))
         return f"  {prefix} {num} {p['name']:<21} {p['position']:<4} {xw:>5}  {xl:>5}  {xr:>5}  {pa:>5}  {gb:>4}  {fb:>4}"
 
-    for i, p in enumerate(starters, 1):
-        lines.append(player_line(f"{i:>2}.", p))
-
-    if bench:
-        lines.append("")
-        lines.append("  Bench")
-        lines.append("  " + "-" * (W - 4))
-        for p in bench:
+    if starters:
+        for i, p in enumerate(starters, 1):
+            lines.append(player_line(f"{i:>2}.", p))
+        if bench:
+            lines.append("")
+            lines.append("  Bench")
+            lines.append("  " + "-" * (W - 4))
+            for p in bench:
+                lines.append(player_line("   ", p))
+    else:
+        # No batting order available (e.g. spring training) — show full roster
+        all_players = sorted(position_players, key=lambda x: x["name"])
+        for p in all_players:
             lines.append(player_line("   ", p))
 
     if own_starter:
