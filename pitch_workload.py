@@ -5,8 +5,25 @@ returns per-day pitch counts so a lineup card can show at a glance how
 heavily a reliever has been used.
 """
 
+import contextlib
+import io
+import os
+import sys
 from datetime import datetime, timedelta
 from pybaseball import statcast_pitcher
+
+
+@contextlib.contextmanager
+def _quiet_stdout():
+    """Temporarily redirect stdout to /dev/null to silence pybaseball chatter."""
+    devnull = open(os.devnull, "w")
+    old = sys.stdout
+    sys.stdout = devnull
+    try:
+        yield
+    finally:
+        sys.stdout = old
+        devnull.close()
 
 
 def get_recent_workload(pitcher_id, date):
@@ -36,7 +53,8 @@ def get_recent_workload(pitcher_id, date):
     ]
 
     try:
-        data = statcast_pitcher(start_str, end_str, pitcher_id)
+        with _quiet_stdout():
+            data = statcast_pitcher(start_str, end_str, pitcher_id)
     except Exception:
         return {"last_3": [{"date": d, "pitches": 0} for d in last_3_dates]}
 
