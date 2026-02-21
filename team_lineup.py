@@ -139,6 +139,20 @@ def extract_batting_order(statcast_day, game_pk, side):
     return {row["batter"]: i + 1 for i, (_, row) in enumerate(order.iterrows())}
 
 
+def _season_range(date):
+    """Return (season_start, season_end) for Statcast queries.
+
+    During the regular season, uses the current year's data up to the given date.
+    Before the season starts (e.g. spring training), falls back to the prior
+    year's full season so players still have stats on their lineup card.
+    """
+    year = int(date[:4])
+    season_start = f"{year}-03-20"
+    if date < season_start:
+        return f"{year - 1}-03-20", f"{year - 1}-11-15"
+    return season_start, date
+
+
 def get_xwoba_splits(batter_ids, date):
     """Calculate season xwOBA and L/R splits for each batter up to the given date.
 
@@ -146,13 +160,12 @@ def get_xwoba_splits(batter_ids, date):
     velocity and launch angle when available, falling back to the actual wOBA
     value for non-batted-ball outcomes (walks, strikeouts, HBP).
     """
-    year = date[:4]
-    season_start = f"{year}-03-20"
+    season_start, season_end = _season_range(date)
 
     splits = {}
     for batter_id in batter_ids:
         try:
-            data = statcast_batter(season_start, date, batter_id)
+            data = statcast_batter(season_start, season_end, batter_id)
         except Exception:
             continue
 
@@ -204,11 +217,10 @@ def get_pitcher_xwoba(pitcher_id, date):
     - xwOBA against = expected wOBA allowed to all batters
     - vL/vR = absolute xwOBA against left-handed / right-handed batters (by stand)
     """
-    year = date[:4]
-    season_start = f"{year}-03-20"
+    season_start, season_end = _season_range(date)
 
     try:
-        data = statcast_pitcher(season_start, date, pitcher_id)
+        data = statcast_pitcher(season_start, season_end, pitcher_id)
     except Exception:
         return None
 
