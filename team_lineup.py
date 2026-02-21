@@ -54,7 +54,13 @@ def fetch_game_data(game_pk, date):
     live_feed = resp.json()
 
     print("Fetching Statcast data for game day...")
-    statcast_day = statcast(start_dt=date, end_dt=date)
+    try:
+        statcast_day = statcast(start_dt=date, end_dt=date)
+    except Exception:
+        statcast_day = None
+
+    if statcast_day is not None and statcast_day.empty:
+        statcast_day = None
 
     return live_feed, statcast_day
 
@@ -112,7 +118,13 @@ def extract_pitchers(live_feed, side):
 
 
 def extract_batting_order(statcast_day, game_pk, side):
-    """Get batting order from pre-fetched Statcast data for starters and subs."""
+    """Get batting order from pre-fetched Statcast data for starters and subs.
+
+    Returns an empty dict when Statcast data is unavailable (e.g. spring training).
+    """
+    if statcast_day is None:
+        return {}
+
     game = statcast_day[statcast_day["game_pk"] == game_pk]
     half = "Bot" if side == "home" else "Top"
     team_batting = game[game["inning_topbot"] == half]
@@ -127,6 +139,20 @@ def extract_batting_order(statcast_day, game_pk, side):
     return {row["batter"]: i + 1 for i, (_, row) in enumerate(order.iterrows())}
 
 
+def _season_range(date):
+    """Return (season_start, season_end) for Statcast queries.
+
+    During the regular season, uses the current year's data up to the given date.
+    Before the season starts (e.g. spring training), falls back to the prior
+    year's full season so players still have stats on their lineup card.
+    """
+    year = int(date[:4])
+    season_start = f"{year}-03-20"
+    if date < season_start:
+        return f"{year - 1}-03-20", f"{year - 1}-11-15"
+    return season_start, date
+
+
 def get_xwoba_splits(batter_ids, date):
     """Calculate season xwOBA and L/R splits for each batter up to the given date.
 
@@ -134,13 +160,12 @@ def get_xwoba_splits(batter_ids, date):
     velocity and launch angle when available, falling back to the actual wOBA
     value for non-batted-ball outcomes (walks, strikeouts, HBP).
     """
-    year = date[:4]
-    season_start = f"{year}-03-20"
+    season_start, season_end = _season_range(date)
 
     splits = {}
     for batter_id in batter_ids:
         try:
-            data = statcast_batter(season_start, date, batter_id)
+            data = statcast_batter(season_start, season_end, batter_id)
         except Exception:
             continue
 
@@ -192,11 +217,10 @@ def get_pitcher_xwoba(pitcher_id, date):
     - xwOBA against = expected wOBA allowed to all batters
     - vL/vR = absolute xwOBA against left-handed / right-handed batters (by stand)
     """
-    year = date[:4]
-    season_start = f"{year}-03-20"
+    season_start, season_end = _season_range(date)
 
     try:
-        data = statcast_pitcher(season_start, date, pitcher_id)
+        data = statcast_pitcher(season_start, season_end, pitcher_id)
     except Exception:
         return None
 
@@ -345,14 +369,19 @@ def build_lineup_card(team_abbrev, date, side, away_name, home_name,
         fb = fmt_pct(s.get("fb_pct"))
         return f"  {prefix} {num} {p['name']:<21} {p['position']:<4} {xw:>5}  {xl:>5}  {xr:>5}  {pa:>5}  {gb:>4}  {fb:>4}"
 
-    for i, p in enumerate(starters, 1):
-        lines.append(player_line(f"{i:>2}.", p))
-
-    if bench:
-        lines.append("")
-        lines.append("  Bench")
-        lines.append("  " + "-" * (W - 4))
-        for p in bench:
+    if starters:
+        for i, p in enumerate(starters, 1):
+            lines.append(player_line(f"{i:>2}.", p))
+        if bench:
+            lines.append("")
+            lines.append("  Bench")
+            lines.append("  " + "-" * (W - 4))
+            for p in bench:
+                lines.append(player_line("   ", p))
+    else:
+        # No batting order available (e.g. spring training) — show full roster
+        all_players = sorted(position_players, key=lambda x: x["name"])
+        for p in all_players:
             lines.append(player_line("   ", p))
 
     if own_starter:
