@@ -28,5 +28,8 @@ Thumbs.db
 .env
 .env.local
 
+# Generated lineup card output
+*_lineup.txt
+
 # Miscellaneous
 *.log
