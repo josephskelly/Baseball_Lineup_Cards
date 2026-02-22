@@ -67,6 +67,12 @@ python test_savant.py
 - Return JSON-serializable values from `lineup_data.py` (no datetime objects,
   use `None` instead of `NaN`)
 
+## Development Workflow
+
+- Always update `README.md` to reflect any changes before committing — keep
+  usage examples, architecture descriptions, and output formats in sync with
+  the code.
+
 ## Key Notes
 
 - Spring training games automatically fall back to previous-season stats
