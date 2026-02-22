@@ -72,6 +72,8 @@ python test_savant.py
 - Always update `README.md` to reflect any changes before committing — keep
   usage examples, architecture descriptions, and output formats in sync with
   the code.
+- Update `CLAUDE.md` if changes affect architecture, commands, dependencies,
+  code style, or other development guidance documented here.
 
 ## Key Notes
 
