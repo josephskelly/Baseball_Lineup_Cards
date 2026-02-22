@@ -104,18 +104,21 @@ Each card contains the following sections:
 
 **Starting Pitcher** — the team's own starter with the same stat line.
 
-**Bullpen + Pitch Log** — all bullpen arms with performance stats, plus a 3-day pitch log showing how many pitches each reliever threw in each of the 3 days before the game. A dash means the pitcher did not appear that day. If all 3 columns show pitch counts, that pitcher has worked 3 days in a row.
+**Bullpen + Pitch Log** — all bullpen arms with performance stats, plus a 3-day pitch log showing how many pitches each reliever threw in each of the 3 days before the game. Pitch counts appear as a single `d1-d2-d3` column (most recent day first); `0` means the pitcher appeared but threw zero pitches recorded, and the field is `--` when workload data is unavailable. If all 3 values are non-zero, that pitcher has worked 3 days in a row.
 
 ### Example output (bullpen section)
 
 ```
-  Bullpen                       Pos  xwOBA     vL     vR     PA   GB%   FB%  |      Pitch Log
-  -----------------------------------------------------------------------------------+--------------------
-      #39 Edwin Díaz            RHP   .277   .302   .254     92   45%   24%  |    21     15      -
-      #30 Jake Diekman          LHP   .308   .279   .333     93   43%   24%  |    15      -     17
-      #38 Tylor Megill          RHP   .327   .320   .337    111   37%   31%  |     -      -      -
-                                                                             | 06-14  06-13  06-12
+  Bullpen                Pos  xwOBA     vL     vR     PA   GB%   FB%  Pitches
+  ----------------------------------------------------------------------------
+      #39 E. Díaz     RHP   .277   .302   .254     92   45%   24%  21-15-0
+      #30 J. Diekman  LHP   .308   .279   .333     93   43%   24%  15-0-17
+      #38 T. Megill   RHP   .327   .320   .337    111   37%   31%  0-0-0
 ```
+
+### Output width
+
+Cards are formatted to a maximum of **80 characters per line**, making them suitable for printing on standard paper or displaying in a fixed-width terminal without wrapping. To fit within this limit, bullpen pitcher names are abbreviated to first initial and last name (e.g. `E. Díaz`).
 
 ## Data Sources
 
