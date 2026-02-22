@@ -2,6 +2,8 @@
 
 Generate detailed lineup cards for any MLB game using data from the MLB Stats API and Statcast (Baseball Savant). Each card includes batting orders, bench players, pitching staffs, xwOBA-based performance stats, and a bullpen pitch log showing recent workload.
 
+Works for regular season and spring training games. During spring training, players display their stats from the previous season.
+
 ## Requirements
 
 - Python 3.8+
@@ -26,11 +28,68 @@ python team_lineup.py NYM 2024-06-15 -o
 python team_lineup.py NYM 2024-06-15 -o my_cards
 ```
 
+### JSON output
+
+Use `--json` to get structured data suitable for other frontends (iOS, web, etc.):
+
+```bash
+python team_lineup.py NYM 2024-06-15 --json
+```
+
+Returns a JSON object with the full game structure:
+
+```json
+{
+  "game_pk": 745527,
+  "date": "2024-06-15",
+  "away": { "abbrev": "SD", "name": "San Diego Padres" },
+  "home": { "abbrev": "NYM", "name": "New York Mets" },
+  "teams": {
+    "NYM": {
+      "side": "home",
+      "position_players": [
+        { "mlbam_id": 624413, "name": "Pete Alonso", "position": "1B",
+          "batting_order": 4, "xwoba": 0.352, "xwoba_L": 0.365,
+          "xwoba_R": 0.345, "pa": 312, "gb_pct": 38.0, "fb_pct": 30.0 }
+      ],
+      "starter": {
+        "mlbam_id": 592789, "name": "Sean Manaea", "throws": "L",
+        "xwoba": 0.310, "xwoba_L": 0.295, "xwoba_R": 0.320, "pa": 450
+      },
+      "bullpen": [
+        { "mlbam_id": 663432, "name": "Edwin Díaz", "throws": "R",
+          "xwoba": 0.277, "pa": 92,
+          "workload": [
+            { "date": "2024-06-14", "pitches": 21 },
+            { "date": "2024-06-13", "pitches": 15 },
+            { "date": "2024-06-12", "pitches": 0 }
+          ] }
+      ],
+      "opposing_starter": { "mlbam_id": 605483, "name": "Dylan Cease", "throws": "R" }
+    }
+  }
+}
+```
+
 ### Check a single pitcher's workload
 
 ```bash
 python pitch_workload.py 663432 2024-07-01
 ```
+
+## Architecture
+
+The codebase is split into three layers for cross-platform reuse:
+
+| File | Layer | Description |
+|---|---|---|
+| `lineup_data.py` | **Data** | Pure data layer — fetches roster, Statcast stats, and pitch workloads. Returns JSON-serializable dicts that any frontend can consume. |
+| `lineup_formatter.py` | **Presentation** | Text formatter — takes structured data and produces ASCII lineup cards. One of many possible consumers of the data layer. |
+| `team_lineup.py` | **CLI** | Thin entry point — wires the data layer to the text formatter or JSON output. |
+| `pitch_workload.py` | **Data** | Bullpen pitch log module — pulls per-pitcher pitch counts for the 3 days before a game. |
+| `test_savant.py` | **Test** | Smoke test to verify Statcast connectivity. |
+
+To build another frontend (e.g. a SwiftUI iOS app), use `lineup_data.get_game_data(team, date)` or consume the `--json` CLI output. The JSON structure maps directly to Swift `Codable` structs.
 
 ## Lineup Card Sections
 
@@ -57,15 +116,6 @@ Each card contains the following sections:
       #38 Tylor Megill          RHP   .327   .320   .337    111   37%   31%  |     -      -      -
                                                                              | 06-14  06-13  06-12
 ```
-
-## Files
-
-| File | Description |
-|---|---|
-| `team_lineup.py` | Main script — fetches game data and generates lineup cards |
-| `pitch_workload.py` | Bullpen pitch log module — pulls per-pitcher pitch counts for the 3 days before a game |
-| `test_savant.py` | Smoke test to verify Statcast connectivity |
-| `requirements.txt` | Python dependencies |
 
 ## Data Sources
 
