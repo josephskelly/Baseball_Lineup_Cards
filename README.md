@@ -28,6 +28,27 @@ python team_lineup.py NYM 2024-06-15 -o
 python team_lineup.py NYM 2024-06-15 -o my_cards
 ```
 
+### HTML output (sortable tables)
+
+Use `--html` to generate a self-contained HTML file with sortable columns:
+
+```bash
+# Auto-named file (e.g. SD_NYM_2024-06-15_lineup.html)
+python team_lineup.py NYM 2024-06-15 --html
+
+# Custom filename
+python team_lineup.py NYM 2024-06-15 --html my_cards.html
+```
+
+Open the resulting `.html` file in any browser. Click any column header to sort ascending; click again to sort descending. The file is fully self-contained (inline CSS and JavaScript) with no external dependencies.
+
+Can be combined with other flags:
+
+```bash
+# Save both .txt files and .html file
+python team_lineup.py NYM 2024-06-15 -o --html
+```
+
 ### JSON output
 
 Use `--json` to get structured data suitable for other frontends (iOS, web, etc.):
@@ -85,6 +106,7 @@ The codebase is split into three layers for cross-platform reuse:
 |---|---|---|
 | `lineup_data.py` | **Data** | Pure data layer — fetches roster, Statcast stats, and pitch workloads. Returns JSON-serializable dicts that any frontend can consume. |
 | `lineup_formatter.py` | **Presentation** | Text formatter — takes structured data and produces ASCII lineup cards. One of many possible consumers of the data layer. |
+| `lineup_html.py` | **Presentation** | HTML formatter — takes structured data and produces a self-contained HTML file with sortable tables. |
 | `team_lineup.py` | **CLI** | Thin entry point — wires the data layer to the text formatter or JSON output. |
 | `pitch_workload.py` | **Data** | Bullpen pitch log module — pulls per-pitcher pitch counts for the 3 days before a game. |
 | `test_savant.py` | **Test** | Smoke test to verify Statcast connectivity. |
