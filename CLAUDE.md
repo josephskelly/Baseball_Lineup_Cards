@@ -14,6 +14,8 @@ Three-layer separation of concerns:
   returns JSON-serializable dicts.
 - **`lineup_formatter.py`** — Presentation layer. Converts structured data into
   80-char ASCII lineup cards.
+- **`lineup_html.py`** — Presentation layer. Converts structured data into a
+  self-contained HTML file with sortable tables.
 - **`team_lineup.py`** — CLI entry point. Argument parsing and output routing.
 - **`pitch_workload.py`** — Standalone module for bullpen 3-day pitch workload.
 
@@ -39,6 +41,9 @@ python team_lineup.py NYM 2024-06-15 -o my_cards
 
 # Output as JSON
 python team_lineup.py NYM 2024-06-15 --json
+
+# Generate HTML file with sortable tables
+python team_lineup.py NYM 2024-06-15 --html
 
 # Check a single pitcher's recent workload
 python pitch_workload.py 663432 2024-07-01
