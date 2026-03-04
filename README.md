@@ -49,6 +49,20 @@ Can be combined with other flags:
 python team_lineup.py NYM 2024-06-15 -o --html
 ```
 
+### Serve HTML on your local network
+
+Add `--serve` to start a local web server after generating the HTML file. This lets you open the lineup card on your phone (or any device on the same Wi-Fi):
+
+```bash
+# Serve on default port 8000
+python team_lineup.py NYM 2024-06-15 --html --serve
+
+# Serve on a custom port
+python team_lineup.py NYM 2024-06-15 --html --serve 9090
+```
+
+Open the printed URL in Safari on your iPhone (or any mobile browser). Sorting works fully over HTTP. Press Ctrl+C to stop the server.
+
 ### JSON output
 
 Use `--json` to get structured data suitable for other frontends (iOS, web, etc.):
