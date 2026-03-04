@@ -40,7 +40,7 @@ python team_lineup.py NYM 2024-06-15 --html
 python team_lineup.py NYM 2024-06-15 --html my_cards.html
 ```
 
-Open the resulting `.html` file in any browser. Click any column header to sort ascending; click again to sort descending. The file is fully self-contained (inline CSS and JavaScript) with no external dependencies.
+Open the resulting `.html` file in any browser, including mobile Safari on iPhone. Click or tap any column header to sort ascending; click/tap again to sort descending. The file is fully self-contained (inline CSS and JavaScript) with no external dependencies.
 
 Can be combined with other flags:
 
