@@ -338,8 +338,6 @@ table.lineup th {
     user-select: none;
     white-space: nowrap;
     position: relative;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: rgba(26, 74, 122, 0.5);
 }
 table.lineup th:hover { background: #1a4a7a; }
 table.lineup th::after {
@@ -378,9 +376,6 @@ tr.bench-divider td {
     text-transform: uppercase;
     letter-spacing: 1px;
 }
-@media (pointer: coarse) {
-    table.lineup th { padding: 10px 8px; }
-}
 """
 
 _JS = """\
@@ -389,10 +384,6 @@ document.addEventListener("DOMContentLoaded", function() {
         var headers = table.querySelectorAll("th");
         headers.forEach(function(th, colIdx) {
             th.addEventListener("click", function() {
-                sortTable(table, colIdx, th);
-            });
-            th.addEventListener("touchend", function(e) {
-                e.preventDefault();
                 sortTable(table, colIdx, th);
             });
         });

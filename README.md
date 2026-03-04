@@ -40,7 +40,7 @@ python team_lineup.py NYM 2024-06-15 --html
 python team_lineup.py NYM 2024-06-15 --html my_cards.html
 ```
 
-Open the resulting `.html` file in any browser, including mobile Safari on iPhone. Click or tap any column header to sort ascending; click/tap again to sort descending. The file is fully self-contained (inline CSS and JavaScript) with no external dependencies.
+Open the resulting `.html` file in any browser. Click any column header to sort ascending; click again to sort descending. The file is fully self-contained (inline CSS and JavaScript) with no external dependencies.
 
 Can be combined with other flags:
 
@@ -48,6 +48,20 @@ Can be combined with other flags:
 # Save both .txt files and .html file
 python team_lineup.py NYM 2024-06-15 -o --html
 ```
+
+### Serve HTML on your local network
+
+Add `--serve` to start a local web server after generating the HTML file. This lets you open the lineup card on your phone (or any device on the same Wi-Fi):
+
+```bash
+# Serve on default port 8000
+python team_lineup.py NYM 2024-06-15 --html --serve
+
+# Serve on a custom port
+python team_lineup.py NYM 2024-06-15 --html --serve 9090
+```
+
+Open the printed URL in Safari on your iPhone (or any mobile browser). Sorting works fully over HTTP. Press Ctrl+C to stop the server.
 
 ### JSON output
 

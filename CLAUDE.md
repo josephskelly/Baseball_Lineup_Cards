@@ -45,6 +45,9 @@ python team_lineup.py NYM 2024-06-15 --json
 # Generate HTML file with sortable tables
 python team_lineup.py NYM 2024-06-15 --html
 
+# Serve HTML on local network (opens on phone via Wi-Fi)
+python team_lineup.py NYM 2024-06-15 --html --serve
+
 # Check a single pitcher's recent workload
 python pitch_workload.py 663432 2024-07-01
 ```
